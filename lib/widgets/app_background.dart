@@ -91,17 +91,17 @@ class _BackgroundPainter extends CustomPainter {
       rect,
       Paint()
         ..color =
-            isDark ? const Color(0xFF08090D) : const Color(0xFFF0F2F5),
+            isDark ? const Color(0xFF0A0D12) : const Color(0xFFF5F2EE),
     );
 
-    // 左上角深蓝
+    // 左上角青色
     _drawRadialLayer(
       canvas,
       center: Offset(size.width * 0.15, size.height * -0.05),
       radius: size.width * 0.65,
       color: isDark
-          ? const Color(0x331E3A8A) // 20%
-          : const Color(0x263B82F6), // 15%
+          ? const Color(0x2D0D9488) // 18% — teal
+          : const Color(0x2114B8A6), // 13% — light teal
     );
 
     // 右下角紫
@@ -111,7 +111,7 @@ class _BackgroundPainter extends CustomPainter {
       radius: size.width * 0.55,
       color: isDark
           ? const Color(0x267C3AED) // 15%
-          : const Color(0x1F7C3AED), // 12%
+          : const Color(0x1F8B5CF6), // 12%
     );
 
     // 中上青色（深色模式更明显）
@@ -120,7 +120,7 @@ class _BackgroundPainter extends CustomPainter {
         canvas,
         center: Offset(size.width * 0.5, size.height * 0.15),
         radius: size.width * 0.45,
-        color: const Color(0x1A06B6D4), // 10%
+        color: const Color(0x1A0D9488), // 10% — teal
       );
     }
   }
@@ -172,40 +172,40 @@ class _BackgroundPainter extends CustomPainter {
   List<_Orb> _getOrbs() {
     if (isDark) {
       return const [
-        // 大号蓝 — 左上
+        // 大号青 — 左上
         _Orb(
           x: 0.18, y: 0.12, radius: 130,
-          color: Color(0x4D3B82F6), // 30%
+          color: Color(0x400D9488), // 25%
           speedX: 0.3, speedY: 0.2, phaseX: 0, phaseY: 1.5,
         ),
         // 中号紫 — 右上
         _Orb(
           x: 0.78, y: 0.25, radius: 100,
-          color: Color(0x408B5CF6), // 25%
+          color: Color(0x3A8B5CF6), // 23%
           speedX: 0.25, speedY: 0.35, phaseX: 2.0, phaseY: 0.5,
         ),
         // 小号青 — 中上
         _Orb(
           x: 0.5, y: 0.05, radius: 70,
-          color: Color(0x3D06B6D4), // 24%
+          color: Color(0x3314B8A6), // 20%
           speedX: 0.4, speedY: 0.15, phaseX: 1.0, phaseY: 3.0,
         ),
         // 中号靛 — 右中
         _Orb(
           x: 0.82, y: 0.65, radius: 95,
-          color: Color(0x336366F1), // 20%
+          color: Color(0x2D6366F1), // 18%
           speedX: 0.2, speedY: 0.3, phaseX: 3.5, phaseY: 1.0,
         ),
         // 小号粉紫 — 左下
         _Orb(
           x: 0.28, y: 0.78, radius: 65,
-          color: Color(0x33D946EF), // 20%
+          color: Color(0x2CD946EF), // 17%
           speedX: 0.35, speedY: 0.25, phaseX: 0.8, phaseY: 2.5,
         ),
-        // 大号深蓝 — 底部
+        // 大号深青 — 底部
         _Orb(
           x: 0.15, y: 0.92, radius: 110,
-          color: Color(0x3D1D4ED8), // 24%
+          color: Color(0x330F766E), // 20%
           speedX: 0.15, speedY: 0.4, phaseX: 4.0, phaseY: 0,
         ),
         // 小号青绿 — 中右
@@ -214,39 +214,43 @@ class _BackgroundPainter extends CustomPainter {
           color: Color(0x2614B8A6), // 15%
           speedX: 0.3, speedY: 0.2, phaseX: 2.5, phaseY: 1.8,
         ),
-        // 中号蓝 — 正中
+        // 中号靛蓝 — 正中
         _Orb(
           x: 0.42, y: 0.42, radius: 80,
-          color: Color(0x262563EB), // 15%
+          color: Color(0x226366F1), // 13%
           speedX: 0.22, speedY: 0.28, phaseX: 1.2, phaseY: 3.8,
         ),
       ];
     } else {
       return const [
-        // 浅色模式清晰可见
+        // 暖粉 — 左上
         _Orb(
           x: 0.2, y: 0.08, radius: 120,
-          color: Color(0x2DBB82F6), // 18%
+          color: Color(0x24F9A8D4), // 14%
           speedX: 0.3, speedY: 0.2, phaseX: 0, phaseY: 1.5,
         ),
+        // 薰衣草 — 右上
         _Orb(
           x: 0.8, y: 0.3, radius: 95,
-          color: Color(0x268B5CF6), // 15%
+          color: Color(0x21C4B5FD), // 13%
           speedX: 0.25, speedY: 0.3, phaseX: 2.0, phaseY: 0.5,
         ),
+        // 淡紫 — 下中
         _Orb(
           x: 0.5, y: 0.82, radius: 105,
-          color: Color(0x267C3AED), // 15%
+          color: Color(0x218B5CF6), // 13%
           speedX: 0.2, speedY: 0.35, phaseX: 3.5, phaseY: 1.0,
         ),
+        // 青绿 — 左中
         _Orb(
           x: 0.1, y: 0.58, radius: 80,
-          color: Color(0x1F2563EB), // 12%
+          color: Color(0x1A14B8A6), // 10%
           speedX: 0.35, speedY: 0.15, phaseX: 1.0, phaseY: 3.0,
         ),
+        // 琥珀 — 右上
         _Orb(
           x: 0.72, y: 0.12, radius: 70,
-          color: Color(0x1F6366F1), // 12%
+          color: Color(0x1AFBBF24), // 10%
           speedX: 0.28, speedY: 0.22, phaseX: 0.8, phaseY: 2.5,
         ),
       ];

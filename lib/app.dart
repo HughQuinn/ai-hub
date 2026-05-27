@@ -41,30 +41,40 @@ class _MyAppState extends State<MyApp> {
           themeMode: themeProvider.themeMode,
           theme: ThemeData(
             brightness: Brightness.light,
-            scaffoldBackgroundColor: const Color(0xFFF0F2F5),
+            scaffoldBackgroundColor: const Color(0xFFF5F2EE),
             appBarTheme: const AppBarTheme(
-              backgroundColor: Color(0xFFF0F2F5),
+              backgroundColor: Color(0xFFF5F2EE),
               foregroundColor: Color(0xFF1A1A1A),
               elevation: 0,
             ),
             cardColor: AppColors.cardBackground(isDark: false),
             colorScheme: const ColorScheme.light(
               primary: Color(0xFF1A1A1A),
-              surface: Color(0xFFF0F2F5),
+              surface: Color(0xFFF5F2EE),
+            ),
+            snackBarTheme: const SnackBarThemeData(
+              backgroundColor: Color(0xFF1F2937),
+              contentTextStyle: TextStyle(color: Color(0xFFF9FAFB)),
+              actionTextColor: Color(0xFF5EEAD4),
             ),
           ),
           darkTheme: ThemeData(
             brightness: Brightness.dark,
-            scaffoldBackgroundColor: const Color(0xFF08090D),
+            scaffoldBackgroundColor: const Color(0xFF0A0D12),
             appBarTheme: const AppBarTheme(
-              backgroundColor: Color(0xFF08090D),
-              foregroundColor: Color(0xFFFFFFFF),
+              backgroundColor: Color(0xFF0A0D12),
+              foregroundColor: Color(0xFFF1F5F9),
               elevation: 0,
             ),
             cardColor: AppColors.cardBackground(isDark: true),
             colorScheme: const ColorScheme.dark(
-              primary: Color(0xFFFFFFFF),
-              surface: Color(0xFF08090D),
+              primary: Color(0xFFF1F5F9),
+              surface: Color(0xFF0A0D12),
+            ),
+            snackBarTheme: const SnackBarThemeData(
+              backgroundColor: Color(0xFF374151),
+              contentTextStyle: TextStyle(color: Color(0xFFF3F4F6)),
+              actionTextColor: Color(0xFF5EEAD4),
             ),
           ),
           home: MainShell(
