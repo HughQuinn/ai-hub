@@ -91,7 +91,7 @@ class _BackgroundPainter extends CustomPainter {
       rect,
       Paint()
         ..color =
-            isDark ? const Color(0xFF0A0D12) : const Color(0xFFF5F2EE),
+            isDark ? const Color(0xFF111318) : const Color(0xFFF5F2EE),
     );
 
     // 左上角青色

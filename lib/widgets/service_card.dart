@@ -6,8 +6,9 @@ import '../models/ai_service.dart';
 class ServiceCard extends StatelessWidget {
   final AiService service;
   final VoidCallback? onTap;
+  final bool hasClient;
 
-  const ServiceCard({super.key, required this.service, this.onTap});
+  const ServiceCard({super.key, required this.service, this.onTap, this.hasClient = false});
 
   Widget _buildIcon(String? path, IconData? iconData) {
     if (path != null) {
@@ -37,7 +38,7 @@ class ServiceCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.08)
+              ? Colors.white.withValues(alpha: 0.05)
               : Colors.black.withValues(alpha: 0.06),
           width: 0.5,
         ),
@@ -105,6 +106,35 @@ class ServiceCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                  ),
+                ),
+              if (hasClient)
+                Positioned(
+                  right: service.needVpn ? 46 : 8,
+                  top: service.needVpn ? 10 : 8,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4CAF50),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              if (!hasClient)
+                Positioned(
+                  right: service.needVpn ? 46 : 8,
+                  top: service.needVpn ? 10 : 8,
+                  child: Icon(
+                    Icons.language,
+                    size: 14,
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.85)
+                        : Colors.black.withValues(alpha: 0.3),
                   ),
                 ),
               if (service.isCustom)

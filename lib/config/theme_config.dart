@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   static Color background({required bool isDark}) {
-    return isDark ? const Color(0xFF0A0D12) : const Color(0xFFF5F2EE);
+    return isDark ? const Color(0xFF111318) : const Color(0xFFF5F2EE);
   }
 
   static Color cardBackground({required bool isDark}) {
-    return isDark ? const Color(0xB31E1E28) : const Color(0xA6FFFFFF);
+    return isDark ? const Color(0xFF1E2028) : const Color(0xA6FFFFFF);
   }
 
   static Color cardPressed({required bool isDark}) {
-    return isDark ? const Color(0xCC2A2A35) : const Color(0xFFE8E8E8);
+    return isDark ? const Color(0xFF282A32) : const Color(0xFFE8E8E8);
   }
 
   static Color primaryText({required bool isDark}) {
@@ -22,10 +22,10 @@ class AppColors {
   }
 
   static Color searchBackground({required bool isDark}) {
-    return isDark ? const Color(0xFF1E293B) : const Color(0xFFFFFFFF);
+    return isDark ? const Color(0xFF1E2028) : const Color(0xFFFFFFFF);
   }
 
   static Color searchBorder({required bool isDark}) {
-    return isDark ? const Color(0xFF334155) : const Color(0xFFE0E0E0);
+    return isDark ? const Color(0xFF2A2D35) : const Color(0xFFE0E0E0);
   }
 }

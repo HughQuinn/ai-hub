@@ -67,93 +67,110 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 // ---- 常规 ----
                 _sectionHeader('常规', secondaryColor),
-                _buildTile(
-                  icon: Icons.language,
-                  iconColor: Colors.blue,
-                  title: '语言',
-                  subtitle: _languageNames[_currentLanguage],
-                  secondaryColor: secondaryColor,
-                  onTap: () => _showLanguageDialog(context),
+                _buildGroup(
+                  isDark: isDark,
+                  children: [
+                    _buildTile(
+                      icon: Icons.language,
+                      iconColor: Colors.blue,
+                      title: '语言',
+                      subtitle: _languageNames[_currentLanguage],
+                      secondaryColor: secondaryColor,
+                      onTap: () => _showLanguageDialog(context),
+                    ),
+                    _groupDivider(isDark),
+                    _buildTile(
+                      icon: Icons.dark_mode,
+                      iconColor: Colors.orange,
+                      title: '深色模式',
+                      subtitle: themeModeText,
+                      secondaryColor: secondaryColor,
+                      onTap: () => _showThemeDialog(context, themeProvider),
+                    ),
+                  ],
                 ),
-                _buildTile(
-                  icon: Icons.dark_mode,
-                  iconColor: Colors.orange,
-                  title: '深色模式',
-                  subtitle: themeModeText,
-                  secondaryColor: secondaryColor,
-                  onTap: () => _showThemeDialog(context, themeProvider),
-                ),
-
-                const Divider(height: 1, indent: 16, endIndent: 16),
 
                 // ---- 平台管理 ----
                 _sectionHeader('平台管理', secondaryColor),
-                _buildTile(
-                  icon: Icons.add_circle_outline,
-                  iconColor: Colors.green,
-                  title: '添加自定义平台',
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const AddPlatformPage()),
-                    );
-                    widget.onRefreshHome?.call();
-                  },
+                _buildGroup(
+                  isDark: isDark,
+                  children: [
+                    _buildTile(
+                      icon: Icons.add_circle_outline,
+                      iconColor: Colors.green,
+                      title: '添加自定义平台',
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const AddPlatformPage()),
+                        );
+                        widget.onRefreshHome?.call();
+                      },
+                    ),
+                    _groupDivider(isDark),
+                    _buildTile(
+                      icon: Icons.sort,
+                      iconColor: Colors.blue,
+                      title: '排序/隐藏平台',
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const SortHidePage()),
+                        );
+                        widget.onRefreshHome?.call();
+                      },
+                    ),
+                  ],
                 ),
-                _buildTile(
-                  icon: Icons.sort,
-                  iconColor: Colors.blue,
-                  title: '排序/隐藏平台',
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const SortHidePage()),
-                    );
-                    widget.onRefreshHome?.call();
-                  },
-                ),
-
-                const Divider(height: 1, indent: 16, endIndent: 16),
 
                 // ---- 数据 ----
                 _sectionHeader('数据', secondaryColor),
-                _buildTile(
-                  icon: Icons.delete_outline,
-                  iconColor: Colors.red,
-                  title: '清除 WebView 缓存',
-                  subtitle: '保留登录状态',
-                  secondaryColor: secondaryColor,
-                  onTap: () => _handleClearCache(context),
+                _buildGroup(
+                  isDark: isDark,
+                  children: [
+                    _buildTile(
+                      icon: Icons.delete_outline,
+                      iconColor: Colors.red,
+                      title: '清除 WebView 缓存',
+                      subtitle: '保留登录状态',
+                      secondaryColor: secondaryColor,
+                      onTap: () => _handleClearCache(context),
+                    ),
+                  ],
                 ),
-
-                const Divider(height: 1, indent: 16, endIndent: 16),
 
                 // ---- 其他 ----
                 _sectionHeader('其他', secondaryColor),
-                _buildTile(
-                  icon: Icons.notifications_outlined,
-                  iconColor: Colors.grey,
-                  title: '通知设置',
-                  subtitle: '即将支持',
-                  showTrailing: false,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('通知设置功能即将支持'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                ),
-                _buildTile(
-                  icon: Icons.info_outline,
-                  iconColor: Colors.grey,
-                  title: '关于/版本',
-                  subtitle: 'v$appVersion',
-                  secondaryColor: secondaryColor,
-                  onTap: () => _showAboutDialog(context),
+                _buildGroup(
+                  isDark: isDark,
+                  children: [
+                    _buildTile(
+                      icon: Icons.notifications_outlined,
+                      iconColor: Colors.grey,
+                      title: '通知设置',
+                      subtitle: '即将支持',
+                      showTrailing: false,
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('通知设置功能即将支持'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                    ),
+                    _groupDivider(isDark),
+                    _buildTile(
+                      icon: Icons.info_outline,
+                      iconColor: Colors.grey,
+                      title: '关于/版本',
+                      subtitle: 'v$appVersion',
+                      secondaryColor: secondaryColor,
+                      onTap: () => _showAboutDialog(context),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 24),
@@ -176,6 +193,37 @@ class _SettingsPageState extends State<SettingsPage> {
           color: color,
         ),
       ),
+    );
+  }
+
+  Widget _buildGroup({required List<Widget> children, required bool isDark}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground(isDark: isDark),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.black.withValues(alpha: 0.06),
+          width: 0.5,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Column(children: children),
+      ),
+    );
+  }
+
+  Widget _groupDivider(bool isDark) {
+    return Divider(
+      height: 1,
+      indent: 52,
+      endIndent: 16,
+      color: isDark
+          ? Colors.white.withValues(alpha: 0.06)
+          : Colors.black.withValues(alpha: 0.06),
     );
   }
 

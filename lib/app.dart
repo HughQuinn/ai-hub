@@ -60,16 +60,16 @@ class _MyAppState extends State<MyApp> {
           ),
           darkTheme: ThemeData(
             brightness: Brightness.dark,
-            scaffoldBackgroundColor: const Color(0xFF0A0D12),
+            scaffoldBackgroundColor: const Color(0xFF111318),
             appBarTheme: const AppBarTheme(
-              backgroundColor: Color(0xFF0A0D12),
+              backgroundColor: Color(0xFF111318),
               foregroundColor: Color(0xFFF1F5F9),
               elevation: 0,
             ),
             cardColor: AppColors.cardBackground(isDark: true),
             colorScheme: const ColorScheme.dark(
               primary: Color(0xFFF1F5F9),
-              surface: Color(0xFF0A0D12),
+              surface: Color(0xFF111318),
             ),
             snackBarTheme: const SnackBarThemeData(
               backgroundColor: Color(0xFF374151),

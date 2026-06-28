@@ -37,6 +37,9 @@ class HomePageState extends State<HomePage> {
   List<String>? _customOrder;
   List<AiService> _customServices = [];
 
+  // 客户端安装状态缓存
+  final Map<String, bool> _installedClients = {};
+
   StorageService get _storageService =>
       Provider.of<StorageService>(context, listen: false);
 
@@ -60,6 +63,25 @@ class HomePageState extends State<HomePage> {
     await _loadHiddenAndOrder();
     await _loadCustomPlatforms();
     setState(() => _isLoading = false);
+    _checkInstalledClients();
+  }
+
+  /// 检测所有服务的客户端安装状态
+  Future<void> _checkInstalledClients() async {
+    final allServices = [...aiServices, ..._customServices];
+    for (var service in allServices) {
+      if (service.packageName != null) {
+        try {
+          final result = await _channel.invokeMethod('checkAppInstalled', {
+            'packageName': service.packageName,
+          });
+          _installedClients[service.name] = result == true;
+        } catch (e) {
+          _installedClients[service.name] = false;
+        }
+      }
+    }
+    setState(() {});
   }
 
   Future<void> _loadClickCounts() async {
@@ -625,6 +647,7 @@ class HomePageState extends State<HomePage> {
                         scrollController: _scrollController,
                         child: ServiceCard(
                           service: service,
+                          hasClient: _installedClients[service.name] ?? false,
                           onTap: () => _openService(service),
                         ),
                       );
