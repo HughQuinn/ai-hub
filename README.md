@@ -15,11 +15,11 @@
 
 ## 项目介绍
 
-AI Hub 是一款 Flutter 构建的 Android 应用，为用户提供**国内外主流 AI 服务的统一入口**。将 Kimi、豆包、DeepSeek、千问、文心一言、智谱清言等 12+ 个 AI 平台整合在卡片式主页中，支持按使用频率自动排序、一键搜索定位，并能智能判断是否优先启动本地 App（已安装时直接唤起原生应用，未安装时跳转网页版）。
+AI Hub 是一款 Flutter 构建的 Android 应用，为用户提供**国内外主流 AI 服务的统一入口**。将 Kimi、豆包、DeepSeek、千问、文心一言、智谱清言等 19 个 AI 平台整合在卡片式主页中，支持按使用频率自动排序、一键搜索定位，并能智能判断是否优先启动本地 App（已安装时直接唤起原生应用，未安装时跳转网页版）。
 
 ## 功能展示
 
-- **AI 服务聚合** — 内置 12+ 个主流 AI 对话平台卡片，覆盖文本处理、推理、多模态等场景
+- **AI 服务聚合** — 内置 19 个主流 AI 对话平台卡片，覆盖文本处理、推理、多模态等场景
 - **智能启动** — 优先检测并启动本地 App（如已安装豆包、DeepSeek），否则跳转网页版
 - **使用频率排序** — 自动统计各服务点击次数，常用服务置顶
 - **实时搜索** — 支持按名称、描述模糊搜索，快速定位目标服务
@@ -37,7 +37,8 @@ AI Hub 是一款 Flutter 构建的 Android 应用，为用户提供**国内外�
 | 状态管理 | Provider | 6.1.5+ |
 | 本地存储 | SharedPreferences | 2.5.5+ |
 | 网络请求 | http | 1.6.0+ |
-| 路径获取 | path_provider | 2.1.5+ |
+| 版本信息 | package_info_plus | 10.x+ |
+| 图标渲染 | flutter_svg | 2.0.10+ |
 | 外部链接 | url_launcher | 6.3.2+ |
 | UI 规范 | Material 3 | — |
 
@@ -77,25 +78,32 @@ flutter build apk --release
 ```
 ai_hub/
 ├── lib/
-│   ├── main.dart                # 入口文件
-│   ├── app.dart                 # MaterialApp 配置、主题、路由
+│   ├── main.dart                # 入口文件（初始化 StorageService / AppInfo）
+│   ├── app.dart                 # MaterialApp 配置、主题、启动时更新检查
 │   ├── config/
 │   │   ├── services_config.dart # AI 服务列表配置
+│   │   ├── icons_config.dart    # 自定义平台图标映射
 │   │   └── theme_config.dart    # 主题颜色配置
 │   ├── models/
 │   │   └── ai_service.dart      # AiService 数据模型
 │   ├── pages/
-│   │   ├── home_page.dart       # 主页（服务网格 + 搜索）
-│   │   └── settings_page.dart   # 设置页（主题切换 + 检查更新）
+│   │   ├── main_shell.dart      # 底部导航壳（主页 + 设置，含更新弹窗）
+│   │   ├── home_page.dart       # 主页（服务网格/卡片堆叠 + 搜索）
+│   │   ├── settings_page.dart   # 设置页（常规/平台管理/数据/其他）
+│   │   ├── add_platform_page.dart # 添加自定义平台
+│   │   └── sort_hide_page.dart  # 排序/隐藏/删除平台
 │   ├── providers/
 │   │   └── theme_provider.dart  # 主题状态管理
 │   ├── services/
 │   │   ├── storage_service.dart # SharedPreferences 存储
-│   │   └── update_service.dart  # GitHub Release OTA 更新
+│   │   ├── update_service.dart  # GitHub Release OTA 更新
+│   │   └── app_info.dart        # 版本信息（pubspec 为唯一来源）
 │   ├── utils/
 │   │   └── week_utils.dart      # 周日期工具
 │   └── widgets/
-│       └── service_card.dart    # 服务卡片组件
+│       ├── service_card.dart    # 服务卡片组件
+│       ├── app_background.dart  # 柔光圆动态背景
+│       └── update_dialog.dart   # OTA 更新弹窗
 ├── android/                     # Android 原生代码
 ├── pubspec.yaml                 # 依赖配置
 └── README.md

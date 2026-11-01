@@ -2,13 +2,14 @@
 
 ## Project Overview
 
-Flutter + Kotlin AI 应用，内嵌 WebView 加载 AI 服务网页。当前处于早期开发阶段，目录骨架已搭建，核心功能待实现。
+Flutter + Kotlin AI 服务聚合启动器，卡片式入口 + 内嵌 WebView 加载 AI 服务网页。
 
 - **技术栈**: Flutter 3.12+ / Dart 3.12+ / Kotlin (Android 原生)
 - **包管理**: pubspec.yaml (flutter pub)
 - **状态管理**: Provider
 - **UI**: Material 3
-- **原生通信**: MethodChannel
+- **原生通信**: MethodChannel（唯一通道 `com.aihub.webview`）
+- **版本号**: pubspec.yaml 的 version 字段是唯一来源，代码通过 AppInfo 读取
 
 ## Project Structure
 
@@ -60,7 +61,7 @@ android/
 4. 本项目文件
 
 ### MethodChannel
-- Channel 命名: `com.example.ai_hub/{功能}`
+- Channel 命名: `com.aihub.{功能}`
 - Flutter 端使用 `MethodChannel` + `invokeMethod`
 - Kotlin 端在 `onMethodCall` 中处理
 - 错误必须 try-catch，返回 `result.error()`
@@ -116,9 +117,10 @@ android/
 |------|------|
 | `provider` | 状态管理 |
 | `shared_preferences` | 本地键值存储 |
-| `url_launcher` | 打开外部链接/App |
-| `path_provider` | 获取本地路径 |
-| `http` | HTTP 请求 |
+| `url_launcher` | 打开系统浏览器/外部链接 |
+| `http` | HTTP 请求（更新检查） |
+| `flutter_svg` | SVG 图标渲染 |
+| `package_info_plus` | 读取应用版本信息 |
 
 ### 禁止引入
 - 不要引入 `dio`（已有 `http`）

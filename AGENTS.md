@@ -3,8 +3,8 @@
 ## 项目概述
 
 **项目名称**: ai_hub
-**技术栈**: Flutter + Dart（主框架）+ Android 原生 Kotlin（自定义插件）
-**项目类型**: AI 相关应用，内嵌 WebView 加载 AI 网页
+**技术栈**: Flutter + Dart（主框架）+ Android 原生 Kotlin（MethodChannel 桥接）
+**项目类型**: AI 服务聚合启动器，内嵌 WebView 加载 AI 网页
 
 ## 目录结构规范
 
@@ -12,22 +12,18 @@
 ai_hub/
 ├── android/                    # Android 原生代码
 │   └── app/src/main/kotlin/com/example/ai_hub/
-│       ├── MainActivity.kt     # 主 Activity
-│       ├── plugin/             # 自定义插件目录（新增）
-│       │   ├── WebViewPlugin.kt
-│       │   └── AdInterceptorPlugin.kt
-│       └── utils/              # 工具类目录（新增）
-│           └── CookieUtils.kt
+│       ├── MainActivity.kt     # 主 Activity + MethodChannel（openUrl/checkAppInstalled/launchApp/clearWebCache）
+│       └── WebViewActivity.kt  # 内置 WebView 页面（进度条/错误重试页/Cookie 持久化）
 ├── lib/                        # Flutter 代码
 │   ├── main.dart              # 入口文件
-│   ├── app.dart               # App 配置
-│   ├── config/                # 配置文件
+│   ├── app.dart               # App 配置（主题/启动时更新检查）
+│   ├── config/                # 配置文件（services_config/icons_config/theme_config）
 │   ├── models/                # 数据模型
-│   ├── pages/                 # 页面
+│   ├── pages/                 # 页面（main_shell/home_page/settings_page/add_platform_page/sort_hide_page）
 │   ├── providers/             # 状态管理
-│   ├── services/              # 服务层
+│   ├── services/              # 服务层（storage_service/update_service/app_info）
 │   ├── utils/                 # 工具类
-│   └── widgets/               # 组件
+│   └── widgets/               # 组件（service_card/app_background/update_dialog）
 └── test/                      # 测试文件
 ```
 
@@ -39,9 +35,11 @@ ai_hub/
 |------|------|----------|
 | Flutter SDK | App 主框架 | 整体应用架构 |
 | Dart | 编程语言 | 所有 Flutter 代码 |
-| url_launcher | 调起已安装客户端 App | 打开外部应用 |
-| shared_preferences | 本地存储 | 使用频率、主题设置 |
-| path_provider | 获取本地存储路径 | 文件存储路径 |
+| provider | 状态管理 | 主题状态、StorageService 注入 |
+| url_launcher | 打开系统浏览器 | WebView 打开失败时的兜底、更新下载 |
+| shared_preferences | 本地存储 | 点击频率、主题、平台配置 |
+| package_info_plus | 读取应用版本 | 版本号唯一来源为 pubspec.yaml |
+| flutter_svg | 渲染 SVG 图标 | 首页卡片图标 |
 | Material Icons | 首页卡片图标 | UI 图标 |
 
 ### Android 原生 Kotlin 层
@@ -49,11 +47,10 @@ ai_hub/
 | 技术 | 用途 | 使用场景 |
 |------|------|----------|
 | WebView | 内嵌加载 AI 网页 | 核心功能 |
-| WebViewClient | 广告请求拦截 + JS 注入 | 自定义 WebView 行为 |
-| CookieManager | 登录状态持久化 | 用户认证 |
-| PackageManager | 查询是否安装客户端 | 应用检测 |
-| Intent | 调起客户端 App | 应用间通信 |
-| SharedPreferences | 原生端存储 | 数据持久化 |
+| WebViewClient | 链接接管 + 错误页 | 自定义 WebView 行为（广告拦截/JS 注入为规划功能，尚未实现） |
+| CookieManager | 登录状态持久化 | onPause 时 flush 落盘 |
+| PackageManager | 查询是否安装客户端 | 应用检测（需在 Manifest queries 声明包名） |
+| Intent | 调起客户端 App / 外部浏览器 | 应用间通信 |
 | MethodChannel | Flutter 与原生通信 | 跨平台通信 |
 
 ## 代码规范
@@ -90,10 +87,10 @@ var webView: WebView? = null
 fun loadUrl(url: String) {}
 
 // 2. 使用 PascalCase 命名类
-class WebViewPlugin : FlutterPlugin
+class WebViewActivity : Activity
 
 // 3. 使用 UPPER_SNAKE_CASE 命名常量
-const val CHANNEL_NAME = "com.example.ai_hub/webview"
+const val CHANNEL_NAME = "com.aihub.webview"
 
 // 4. 包名使用全小写
 package com.example.ai_hub
@@ -104,10 +101,9 @@ package com.example.ai_hub
 ### Channel 命名规则
 
 ```kotlin
-// 格式: {域名}/{功能模块}
-const val CHANNEL_WEBVIEW = "com.example.ai_hub/webview"
-const val CHANNEL_AD_INTERCEPTOR = "com.example.ai_hub/ad_interceptor"
-const val CHANNEL_COOKIE_MANAGER = "com.example.ai_hub/cookie_manager"
+// 格式: {域名}.{功能模块}（当前唯一通道如下）
+const val CHANNEL_WEBVIEW = "com.aihub.webview"
+// 已实现方法: openUrl / checkAppInstalled / launchApp / clearWebCache
 ```
 
 ### 通信数据格式
@@ -158,87 +154,43 @@ override fun onMethodCall(call: MethodCall, result: Result) {
 
 ## WebView 开发规范
 
-### 初始化流程
+### 现有实现（MainActivity + WebViewActivity）
 
 ```kotlin
-// 1. 在 MainActivity 中初始化
-class MainActivity : FlutterActivity() {
-    private lateinit var webViewPlugin: WebViewPlugin
-    
-    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-        super.configureFlutterEngine(flutterEngine)
-        webViewPlugin = WebViewPlugin(this)
-        webViewPlugin.configure(flutterEngine)
-    }
-}
+// Flutter 侧通过唯一通道调用原生能力
+const channel = MethodChannel('com.aihub.webview');
+// openUrl(url)            -> 明文 http 且 Android 9+ 时走外部浏览器，否则打开 WebViewActivity
+// checkAppInstalled(pkg)  -> 查询客户端是否安装（需在 Manifest <queries> 中声明包名）
+// launchApp(pkg)          -> 唤起已安装客户端
+// clearWebCache()         -> 临时 WebView 实例清空缓存（保留 Cookie）
 ```
 
-### 广告拦截规范
+WebViewActivity 职责：页面加载进度条、加载失败错误页（跟随深浅色）、
+返回键回退导航、onPause 时 `CookieManager.flush()` 持久化登录态。
 
-```kotlin
-// 拦截规则定义
-private val adPatterns = listOf(
-    "googleads",
-    "doubleclick.net",
-    "adservice",
-    // ...更多广告域名
-)
+### 广告拦截 / JS 注入（规划功能，尚未实现）
 
-override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-    val url = request.url.toString()
-    
-    // 检查是否为广告请求
-    if (adPatterns.any { url.contains(it, ignoreCase = true) }) {
-        // 返回空响应
-        return WebResourceResponse("text/plain", "UTF-8", "".byteInputStream())
-    }
-    
-    return super.shouldInterceptRequest(view, request)
-}
-```
-
-### JS 注入规范
-
-```kotlin
-// 注入时机: 页面加载完成后
-override fun onPageFinished(view: WebView, url: String?) {
-    super.onPageFinished(view, url)
-    
-    // 注入 JavaScript
-    view.evaluateJavascript("""
-        (function() {
-            // 隐藏广告元素
-            var ads = document.querySelectorAll('.ad-container, .advertisement');
-            ads.forEach(function(ad) {
-                ad.style.display = 'none';
-            });
-        })();
-    """.trimIndent(), null)
-}
-```
+如后续需要，在 WebViewActivity 的 `WebViewClient` 中实现：
+`shouldInterceptRequest` 按域名返回空响应拦截广告请求，
+`onPageFinished` 中 `evaluateJavascript` 注入隐藏广告元素的脚本。
 
 ### Cookie 管理规范
 
 ```kotlin
-// 保存登录状态
-fun saveCookies(url: String, cookies: Map<String, String>) {
-    val cookieManager = CookieManager.getInstance()
-    cookies.forEach { (name, value) ->
-        cookieManager.setCookie(url, "$name=$value")
-    }
-    cookieManager.flush()
-}
-
-// 获取登录状态
-fun getCookies(url: String): String? {
-    val cookieManager = CookieManager.getInstance()
-    return cookieManager.getCookie(url)
+// WebView 内的登录 Cookie 由系统自动维护，
+// 关键是在 Activity 生命周期中主动落盘，防止进程被杀丢失：
+override fun onPause() {
+    CookieManager.getInstance().flush()
+    super.onPause()
 }
 ```
 
 ## 测试规范
 
-### Flutter 测试
+测试文件位于 `test/`，现有 `update_service_test.dart`（纯函数单测）与
+`widget_test.dart`（启动冒烟测试，mock SharedPreferences/PackageInfo/MethodChannel）。
+注意：AppBackground 存在无限循环动画，widget 测试中不可使用 `pumpAndSettle`，
+需用固定时长的 `tester.pump()`。
 
 ```dart
 // 单元测试
@@ -246,14 +198,12 @@ fun getCookies(url: String): String? {
 // 命名: {功能}_test.dart
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ai_hub/services/api_service.dart';
+import 'package:ai_hub/services/update_service.dart';
 
 void main() {
-  group('ApiService', () {
-    test('should return user data', () async {
-      final service = ApiService();
-      final result = await service.getUserInfo();
-      expect(result, isNotNull);
+  group('UpdateService.isNewerVersion', () {
+    test('远端版本更新时返回 true', () {
+      expect(UpdateService.isNewerVersion('1.3.0', '1.4.0'), isTrue);
     });
   });
 }
@@ -262,21 +212,34 @@ void main() {
 ### Widget 测试
 
 ```dart
-// 文件位置: test/widgets/
-// 命名: {组件名}_test.dart
+// 文件位置: test/
+// 命名: widget_test.dart 或 {组件名}_test.dart
+// 注意: mock 掉 SharedPreferences / PackageInfo / MethodChannel 后再 pumpWidget
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ai_hub/widgets/custom_card.dart';
+import 'package:ai_hub/models/ai_service.dart';
+import 'package:ai_hub/widgets/service_card.dart';
 
 void main() {
-  testWidgets('CustomCard displays title', (WidgetTester tester) async {
+  testWidgets('ServiceCard displays name', (WidgetTester tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: CustomCard(title: 'Test Title'),
+        home: Scaffold(
+          body: Center(
+            child: ServiceCard(
+              service: AiService(
+                name: 'Kimi',
+                url: 'https://kimi.moonshot.cn',
+                description: '擅长长文本处理',
+                region: 'domestic',
+              ),
+            ),
+          ),
+        ),
       ),
     );
-    
-    expect(find.text('Test Title'), findsOneWidget);
+    expect(find.text('Kimi'), findsOneWidget);
   });
 }
 ```
