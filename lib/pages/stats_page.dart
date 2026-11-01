@@ -11,10 +11,10 @@ class StatsPage extends StatefulWidget {
   const StatsPage({super.key});
 
   @override
-  State<StatsPage> createState() => _StatsPageState();
+  StatsPageState createState() => StatsPageState();
 }
 
-class _StatsPageState extends State<StatsPage> {
+class StatsPageState extends State<StatsPage> {
   static const _keepWeeks = 12;
 
   bool _isLoading = true;
@@ -29,6 +29,10 @@ class _StatsPageState extends State<StatsPage> {
     super.initState();
     _loadData();
   }
+
+  /// 重新读取点击数据；MainShell 在切到本 Tab 时调用，
+  /// 保证启动后新产生的使用记录能及时呈现。
+  Future<void> refresh() => _loadData();
 
   Future<void> _loadData() async {
     final history = await _storageService.getWeeklyHistory();

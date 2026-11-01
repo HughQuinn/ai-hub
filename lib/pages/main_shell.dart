@@ -25,6 +25,7 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
   final _homePageKey = GlobalKey<HomePageState>();
+  final _statsPageKey = GlobalKey<StatsPageState>();
   bool _updateDialogShown = false;
 
   @override
@@ -57,7 +58,7 @@ class _MainShellState extends State<MainShell> {
 
     final pages = [
       HomePage(key: _homePageKey),
-      const StatsPage(),
+      StatsPage(key: _statsPageKey),
       SettingsPage(onRefreshHome: () => _homePageKey.currentState?.refreshServices()),
     ];
 
@@ -68,7 +69,11 @@ class _MainShellState extends State<MainShell> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        onTap: (index) {
+          setState(() => _currentIndex = index);
+          // 统计数据随使用实时变化，切到统计 Tab 时重新读取
+          if (index == 1) _statsPageKey.currentState?.refresh();
+        },
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         selectedItemColor: AppColors.primaryText(isDark: isDark),
         unselectedItemColor: AppColors.secondaryText(isDark: isDark),
