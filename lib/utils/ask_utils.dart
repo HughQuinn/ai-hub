@@ -5,7 +5,8 @@ class AskUtils {
   /// 提问历史上限。
   static const int maxHistory = 5;
 
-  /// 内置快捷提问模板，点击后填入搜索框可继续编辑。
+  /// 内置快捷提问模板，作为 ask_templates 未初始化时的默认值；
+  /// 用户可在提问模板管理页增删改排。
   static const List<String> templates = [
     '帮我写周报',
     '翻译成英文：',
@@ -24,7 +25,7 @@ class AskUtils {
   }
 
   /// 历史与模板合并为展示用芯片文本：历史在前，模板去重补位。
-  static List<String> chipsFor(List<String> history) {
+  static List<String> chipsFor(List<String> history, List<String> templates) {
     final result = [...history];
     for (final t in templates) {
       if (!result.contains(t)) result.add(t);

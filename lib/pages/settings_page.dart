@@ -9,6 +9,7 @@ import 'package:ai_hub/services/storage_service.dart';
 import 'package:ai_hub/services/update_service.dart';
 import 'package:ai_hub/config/theme_config.dart';
 import 'package:ai_hub/pages/add_platform_page.dart';
+import 'package:ai_hub/pages/ask_templates_page.dart';
 import 'package:ai_hub/pages/sort_hide_page.dart';
 import 'package:ai_hub/providers/theme_provider.dart';
 import 'package:ai_hub/utils/backup_codec.dart';
@@ -104,6 +105,22 @@ class _SettingsPageState extends State<SettingsPage> {
                       subtitle: themeModeText,
                       secondaryColor: secondaryColor,
                       onTap: () => _showThemeDialog(context, themeProvider),
+                    ),
+                    _groupDivider(isDark),
+                    _buildTile(
+                      icon: Icons.history_edu,
+                      iconColor: Colors.pink,
+                      title: '提问模板管理',
+                      subtitle: '自定义直达提问的快捷模板',
+                      secondaryColor: secondaryColor,
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const AskTemplatesPage()),
+                        );
+                        widget.onRefreshHome?.call();
+                      },
                     ),
                   ],
                 ),

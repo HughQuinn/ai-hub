@@ -187,4 +187,14 @@ class StorageService {
   Future<void> setAskHistory(List<String> history) async {
     await _prefs?.setStringList('ask_history', history);
   }
+
+  /// 用户自定义的提问模板（含排序）；null 表示未初始化，应使用
+  /// AskUtils.templates 内置默认。空列表表示用户明确清空。
+  Future<List<String>?> getAskTemplates() async {
+    return _prefs?.getStringList('ask_templates');
+  }
+
+  Future<void> setAskTemplates(List<String> templates) async {
+    await _prefs?.setStringList('ask_templates', templates);
+  }
 }

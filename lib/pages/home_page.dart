@@ -32,6 +32,7 @@ class HomePageState extends State<HomePage> {
   int _selectedTab = 0; // 0=全部, 1=国内, 2=国外
   bool _viewModeCard = false; // false=网格, true=卡片
   List<String> _askHistory = [];
+  List<String> _askTemplates = AskUtils.templates;
   final PageController _pageController =
       PageController(viewportFraction: 0.78);
   int _currentPage = 0;
@@ -76,6 +77,8 @@ class HomePageState extends State<HomePage> {
     await _loadHiddenAndOrder();
     await _loadCustomPlatforms();
     _askHistory = await _storageService.getAskHistory();
+    _askTemplates =
+        await _storageService.getAskTemplates() ?? [...AskUtils.templates];
     setState(() => _isLoading = false);
     _checkInstalledClients();
     await _syncShortcuts();
@@ -142,6 +145,10 @@ class HomePageState extends State<HomePage> {
     await _loadHiddenAndOrder();
     await _loadClickCounts();
     await _loadCustomPlatforms();
+    _askHistory = await _storageService.getAskHistory();
+    _askTemplates =
+        await _storageService.getAskTemplates() ?? [...AskUtils.templates];
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadCustomPlatforms() async {
@@ -803,7 +810,7 @@ class HomePageState extends State<HomePage> {
     if (_searchQuery.trim().isNotEmpty || !_searchFocus.hasFocus) {
       return const SizedBox.shrink();
     }
-    final chips = AskUtils.chipsFor(_askHistory);
+    final chips = AskUtils.chipsFor(_askHistory, _askTemplates);
     if (chips.isEmpty) return const SizedBox.shrink();
     final secondaryColor = AppColors.secondaryText(isDark: isDark);
 
