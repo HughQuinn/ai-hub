@@ -237,6 +237,27 @@ override fun onPause() {
 
 - 与置顶/浏览器打开/隐藏并列，复制 `service.url` 到剪贴板，不影响点击统计
 
+## 功能模块说明（v1.6.0 新增）
+
+### 编辑自定义平台
+
+- 排序/隐藏页的自定义平台行新增编辑按钮，进入 `AddPlatformPage(editName:)` 编辑模式：
+  预填名称/URL/描述/图标/分类，保存时原位替换（保持用户排序位置）
+- 重名校验在编辑模式下放行自身原名；重命名后旧的点击计数/置顶记录不迁移（与新增平台语义一致）
+
+### 统计周环比
+
+- 本周 Top 每行显示较上一自然周的差值（`UsageMath.weekDelta`/`formatWeekDelta`）：
+  绿色 +N / 红色 -N / 持平
+- 上一周键由 `WeekUtils.weekKeyForMonday`（与 weekMonday 互逆，含 53 周跨年边界）从
+  上周一日期反推；上周无任何记录时不展示环比
+
+### 更新提醒「忽略此版本」
+
+- 更新弹窗新增「忽略此版本」，写入 `ignored_update_version`；启动自动检查经
+  `UpdateService.shouldPrompt` 过滤已忽略版本；设置-关于显示忽略状态并可「恢复提醒」
+- 手动「检查更新」不受忽略影响，保证用户主动操作总有结果
+
 ## 测试规范
 
 测试文件位于 `test/`，`update_service_test.dart`（纯函数单测）与
@@ -246,7 +267,10 @@ v1.4.0 补充：`week_utils_test.dart`/`service_order_test.dart`/`ask_url_test.d
 `home_features_test.dart`（置顶/统计页/直达提问的 widget 测试）。
 v1.5.0 补充：`backup_codec_test.dart`（备份编解码与校验），
 并在 `service_order_test.dart`/`storage_history_test.dart`/`home_features_test.dart`
-中补充最近使用的用例。
+中补充最近使用的用例。v1.6.0 补充：`usage_math_test.dart`（周环比计算）、
+`edit_platform_test.dart`（编辑自定义平台 widget 测试），
+并在 `week_utils_test.dart`/`update_service_test.dart`/`storage_history_test.dart`
+中补充 weekKeyForMonday、shouldPrompt 与忽略版本的用例。
 注意：AppBackground 存在无限循环动画，widget 测试中不可使用 `pumpAndSettle`，
 需用固定时长的 `tester.pump()`。
 
