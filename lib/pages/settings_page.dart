@@ -199,20 +199,21 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildGroup({required List<Widget> children, required bool isDark}) {
+    // ListTile 的背景与水波纹绘制在最近的 Material 上，
+    // 因此背景/边框必须由 Material 自身提供，不能用带背景色的 Container 包裹
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
+      child: Material(
         color: AppColors.cardBackground(isDark: isDark),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : Colors.black.withValues(alpha: 0.06),
-          width: 0.5,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.05)
+                : Colors.black.withValues(alpha: 0.06),
+            width: 0.5,
+          ),
         ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
         child: Column(children: children),
       ),
     );
