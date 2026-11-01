@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/week_utils.dart';
 
@@ -49,18 +48,12 @@ class StorageService {
 
   /// Get the list of hidden service names.
   Future<List<String>> getHiddenServices() async {
-    final result = _prefs?.getStringList('hidden_services') ?? [];
-    debugPrint('[AiHub] StorageService getHiddenServices: $result');
-    return result;
+    return _prefs?.getStringList('hidden_services') ?? [];
   }
 
   /// Set the list of hidden service names.
   Future<void> setHiddenServices(List<String> services) async {
-    debugPrint('[AiHub] StorageService setHiddenServices: $services');
     await _prefs?.setStringList('hidden_services', services);
-    // 验证保存是否成功
-    final saved = _prefs?.getStringList('hidden_services') ?? [];
-    debugPrint('[AiHub] StorageService setHiddenServices verify: $saved');
   }
 
   /// Get custom order of service names (null if not set).

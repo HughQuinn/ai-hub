@@ -87,7 +87,6 @@ class HomePageState extends State<HomePage> {
 
   Future<void> _loadClickCounts() async {
     final counts = await _storageService.getAllClickCounts();
-    debugPrint('[AiHub] _clickCounts loaded: $counts');
     setState(() {
       _clickCounts = counts;
     });
@@ -104,19 +103,15 @@ class HomePageState extends State<HomePage> {
 
   /// 刷新服务列表（从排序页面返回时调用）
   Future<void> refreshServices() async {
-    debugPrint('[AiHub] refreshServices called');
     await _loadHiddenAndOrder();
     await _loadClickCounts();
     await _loadCustomPlatforms();
-    debugPrint('[AiHub] refreshServices done, _customServices: ${_customServices.length}');
   }
 
   Future<void> _loadCustomPlatforms() async {
     try {
       final platforms = await _storageService.getCustomPlatforms();
-      debugPrint('[AiHub] _loadCustomPlatforms raw: $platforms');
       final customServices = platforms.map((p) {
-        debugPrint('[AiHub] _loadCustomPlatforms platform: $p');
         return AiService(
           name: p['name'] as String,
           url: p['url'] as String,
@@ -126,12 +121,11 @@ class HomePageState extends State<HomePage> {
           isCustom: true,
         );
       }).toList();
-      debugPrint('[AiHub] _loadCustomPlatforms parsed: ${customServices.length}');
       setState(() {
         _customServices = customServices;
       });
-      debugPrint('[AiHub] _customServices after setState: ${_customServices.length}');
     } catch (e) {
+      // 自定义平台数据损坏时不让首页崩溃
       debugPrint('[AiHub] _loadCustomPlatforms error: $e');
     }
   }
@@ -139,14 +133,11 @@ class HomePageState extends State<HomePage> {
   List<AiService> get _sortedServices {
     // 合并内置服务和自定义服务
     final allServices = [...aiServices, ..._customServices];
-    debugPrint('[AiHub] _sortedServices allServices count: ${allServices.length}');
-    debugPrint('[AiHub] _customServices names: ${_customServices.map((s) => s.name).toList()}');
 
     // 过滤隐藏的服务
     var services = allServices
         .where((s) => !_hiddenNames.contains(s.name))
         .toList();
-    debugPrint('[AiHub] _sortedServices after filter: ${services.length}, hiddenNames: $_hiddenNames');
 
     // 如果有自定义排序，按自定义顺序排列
     if (_customOrder != null && _customOrder!.isNotEmpty) {
@@ -185,8 +176,6 @@ class HomePageState extends State<HomePage> {
       services = [...domestic, ...overseas];
     }
 
-    debugPrint('[AiHub] _sortedServices final count: ${services.length}');
-    debugPrint('[AiHub] _sortedServices final names: ${services.map((s) => s.name).toList()}');
     return services;
   }
 
@@ -200,7 +189,6 @@ class HomePageState extends State<HomePage> {
     }
     // 搜索二次过滤
     if (_searchQuery.isEmpty) {
-      debugPrint('[AiHub] _filteredServices final: ${result.length}');
       return result;
     }
     final query = _searchQuery.toLowerCase();
@@ -208,7 +196,6 @@ class HomePageState extends State<HomePage> {
       return s.name.toLowerCase().contains(query) ||
           s.description.toLowerCase().contains(query);
     }).toList();
-    debugPrint('[AiHub] _filteredServices with search: ${filtered.length}');
     return filtered;
   }
 
@@ -486,12 +473,13 @@ class HomePageState extends State<HomePage> {
   }
 
   Future<void> _openService(AiService service) async {
+    // 在任何 await 之前捕获，避免跨异步间隙使用 context
+    final messenger = ScaffoldMessenger.of(context);
+
     await _storageService.incrementClick(service.name);
     final newCounts = await _storageService.getAllClickCounts();
     if (mounted) setState(() => _clickCounts = newCounts);
 
-    // 在 await 之前捕获，避免跨异步间隙使用 context
-    final messenger = ScaffoldMessenger.of(context);
     try {
       if (service.packageName != null) {
         final installed = await _channel.invokeMethod(

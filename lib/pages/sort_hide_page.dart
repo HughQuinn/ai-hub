@@ -32,7 +32,6 @@ class _SortHidePageState extends State<SortHidePage> {
     final customOrder = await _storageService.getCustomOrder();
     final hiddenList = await _storageService.getHiddenServices();
     final customPlatforms = await _storageService.getCustomPlatforms();
-    debugPrint('[AiHub] SortHidePage _loadData hiddenList: $hiddenList');
 
     // 合并内置服务和自定义服务
     final customServices = customPlatforms.map((p) {
@@ -49,7 +48,6 @@ class _SortHidePageState extends State<SortHidePage> {
     setState(() {
       _services = [...aiServices, ...customServices];
       _hiddenNames = hiddenList.toSet();
-      debugPrint('[AiHub] SortHidePage _hiddenNames after load: $_hiddenNames');
       if (customOrder != null && customOrder.isNotEmpty) {
         // 按自定义顺序排序
         final orderMap = <String, int>{};
@@ -69,7 +67,6 @@ class _SortHidePageState extends State<SortHidePage> {
     final order = _services.map((s) => s.name).toList();
     await _storageService.setCustomOrder(order);
     await _storageService.setHiddenServices(_hiddenNames.toList());
-    debugPrint('[AiHub] SortHidePage _saveData hiddenNames: $_hiddenNames');
   }
 
   void _toggleVisibility(AiService service) {
@@ -79,7 +76,6 @@ class _SortHidePageState extends State<SortHidePage> {
       } else {
         _hiddenNames.add(service.name);
       }
-      debugPrint('[AiHub] SortHidePage _toggleVisibility: ${service.name}, hiddenNames: $_hiddenNames');
     });
     _saveData();
   }
