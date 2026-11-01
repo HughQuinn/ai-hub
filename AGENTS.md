@@ -283,6 +283,16 @@ override fun onPause() {
 - **自定义平台 URL 校验**：`http://` 这类缺少主机名的地址此前可保存，现校验
   `Uri.tryParse` 主机非空
 
+## 功能模块说明（v1.9.0 新增）
+
+### 提问历史与快捷模板
+
+- 直达提问工作流增强：搜索框聚焦且无输入时显示「提问:」行——提问历史（最近 5 条，
+  去重置顶）在前、内置模板（AskUtils.templates）补位；点击回填搜索框继续编辑，
+  有历史时行尾提供「清空」；未聚焦时该行让位于「最近使用」行，输入非空时让位于直达提问行
+- 触发提问（问 XX）时经 `AskUtils.push` 记录历史并持久化到 `ask_history`
+- 卡片堆叠视图补齐与网格一致的徽章：客户端状态点/地球图标、自定义平台徽章
+
 ## 测试规范
 
 测试文件位于 `test/`，`update_service_test.dart`（纯函数单测）与
@@ -299,6 +309,8 @@ v1.5.0 补充：`backup_codec_test.dart`（备份编解码与校验），
 v1.7.0 补充：`home_features_test.dart` 中新增桌面快捷方式通道契约用例、
 统计页实时刷新回归用例；`week_utils_test.dart` 补充 `isoWeekYearWeek` 跨年边界用例；
 `edit_platform_test.dart` 补充 URL 空主机校验用例。
+v1.9.0 补充：`ask_utils_test.dart`（提问历史去重/截断/模板合并），
+`home_features_test.dart` 补充聚焦展示模板、提问记录历史与回填的用例。
 注意：AppBackground 存在无限循环动画，widget 测试中不可使用 `pumpAndSettle`，
 需用固定时长的 `tester.pump()`。
 
