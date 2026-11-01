@@ -12,8 +12,9 @@
 ai_hub/
 ├── android/                    # Android 原生代码
 │   └── app/src/main/kotlin/com/example/ai_hub/
-│       ├── MainActivity.kt     # 主 Activity + MethodChannel（openUrl/checkAppInstalled/launchApp/clearWebCache）
-│       └── WebViewActivity.kt  # 内置 WebView 页面（进度条/错误重试页/Cookie 持久化）
+│       ├── MainActivity.kt     # 主 Activity + MethodChannel（openUrl/checkAppInstalled/launchApp/clearWebCache/updateShortcuts）+ 快捷方式意图
+│       ├── WebViewActivity.kt  # 内置 WebView 页面（进度条/错误重试页/Cookie 持久化/广告拦截）
+│       └── AdBlocker.kt        # WebView 广告/追踪域名黑名单匹配
 ├── lib/                        # Flutter 代码
 │   ├── main.dart              # 入口文件
 │   ├── app.dart               # App 配置（主题/启动时更新检查）
@@ -47,7 +48,7 @@ ai_hub/
 | 技术 | 用途 | 使用场景 |
 |------|------|----------|
 | WebView | 内嵌加载 AI 网页 | 核心功能 |
-| WebViewClient | 链接接管 + 错误页 | 自定义 WebView 行为（广告拦截/JS 注入为规划功能，尚未实现） |
+| WebViewClient | 链接接管 + 错误页 + 请求拦截 | 自定义 WebView 行为（广告拦截已实现，见 AdBlocker.kt） |
 | CookieManager | 登录状态持久化 | onPause 时 flush 落盘 |
 | PackageManager | 查询是否安装客户端 | 应用检测（需在 Manifest queries 声明包名） |
 | Intent | 调起客户端 App / 外部浏览器 | 应用间通信 |
@@ -168,11 +169,15 @@ const channel = MethodChannel('com.aihub.webview');
 WebViewActivity 职责：页面加载进度条、加载失败错误页（跟随深浅色）、
 返回键回退导航、onPause 时 `CookieManager.flush()` 持久化登录态。
 
-### 广告拦截 / JS 注入（规划功能，尚未实现）
+### 广告拦截（v1.8.0 已实现）
 
-如后续需要，在 WebViewActivity 的 `WebViewClient` 中实现：
-`shouldInterceptRequest` 按域名返回空响应拦截广告请求，
-`onPageFinished` 中 `evaluateJavascript` 注入隐藏广告元素的脚本。
+- `AdBlocker.kt` 维护保守的广告/统计域名黑名单，`WebViewClient.shouldInterceptRequest`
+  按主机后缀精确匹配（`host == 项` 或 `host.endsWith(".项")`），命中返回空
+  `WebResourceResponse`；不包含 CDN 与第三方登录域名，避免误伤站点功能
+- 设计取舍：仅做请求级拦截，不做 DOM/JS 注入隐藏元素——后者需逐站点维护选择器且易误伤
+- 开关存于 `ad_block_enabled`（默认开启），设置页「广告拦截」可切换；原生
+  WebViewActivity 直接读取 Flutter SharedPreferences 的 `flutter.ad_block_enabled` 键，
+  两侧键名需保持一致；开关变更对已打开页面在下次加载时生效
 
 ### Cookie 管理规范
 
