@@ -19,10 +19,10 @@ ai_hub/
 │   ├── app.dart               # App 配置（主题/启动时更新检查）
 │   ├── config/                # 配置文件（services_config/icons_config/theme_config）
 │   ├── models/                # 数据模型
-│   ├── pages/                 # 页面（main_shell/home_page/settings_page/add_platform_page/sort_hide_page）
+│   ├── pages/                 # 页面（main_shell/home_page/stats_page/settings_page/add_platform_page/sort_hide_page）
 │   ├── providers/             # 状态管理
-│   ├── services/              # 服务层（storage_service/update_service/app_info）
-│   ├── utils/                 # 工具类
+│   ├── services/              # 服务层（storage_service/update_service/reachability_service/app_info）
+│   ├── utils/                 # 工具类（week_utils/service_order_utils）
 │   └── widgets/               # 组件（service_card/app_background/update_dialog）
 └── test/                      # 测试文件
 ```
@@ -185,10 +185,45 @@ override fun onPause() {
 }
 ```
 
+## 功能模块说明（v1.4.0 新增）
+
+### 收藏置顶
+
+- 长按首页卡片弹出操作面板：置顶/取消置顶、在浏览器打开、隐藏该平台
+- 置顶优先级最高，叠加在周点击排序与自定义排序之上（`ServiceOrderUtils.applyPinnedOrder`）
+- 星标徽章显示在卡片左上角；存储键 `pinned_services`
+- 「隐藏」复用排序/隐藏页的 `hidden_services` 存储，两处入口互通
+
+### 使用统计（底部第三个 Tab）
+
+- 数据来源为已有的按周点击键 `service_clicks_{year}_W{week}_{serviceName}`，只读聚合，不改变计数逻辑
+- 展示：本周 Top 服务条形图、近 12 周趋势柱状图、累计统计（累计打开/活跃周数/使用服务数）
+- 历史数据治理：`StorageService.getWeeklyHistory()` 读取全部历史，`pruneHistory({keepWeeks = 12})`
+  按 ISO 周一日期清理过期记录；统计页提供手动清理入口
+- 周键解析/比较/周一推算等纯逻辑集中在 `WeekUtils`
+
+### AI 直达提问
+
+- 搜索框输入问题后，结果区上方出现「问 XX」入口行（覆盖全部可见服务，不随搜索结果过滤）
+- `AiService.askUrlTemplate` 配置直达模板（`{q}` 占位符），已知支持的服务：Kimi/豆包/腾讯元宝/
+  ChatGPT/Claude/Perplexity/Copilot/Grok
+- 未配置模板的服务回退为「复制问题到剪贴板 + 打开主页」；提问与普通打开一样计入周点击统计
+- 自定义平台暂无模板，自动走剪贴板回退
+
+### 服务可达性检测（设置-数据）
+
+- 手动触发，`ReachabilityService.checkAll` 并发 GET 探测（拿到状态码即断开，不下载响应体）
+- 三档分类 `classifyStatus`：2xx/3xx 正常；401/403/405/429/451 访问受限（站点在线但拦截探测）；
+  其余无法访问
+- 纯 Dart `http` 实现，不自动轮询、不涉及原生层
+
 ## 测试规范
 
-测试文件位于 `test/`，现有 `update_service_test.dart`（纯函数单测）与
+测试文件位于 `test/`，`update_service_test.dart`（纯函数单测）与
 `widget_test.dart`（启动冒烟测试，mock SharedPreferences/PackageInfo/MethodChannel）。
+v1.4.0 补充：`week_utils_test.dart`/`service_order_test.dart`/`ask_url_test.dart`/
+`reachability_test.dart`/`storage_history_test.dart`（存储与纯函数）与
+`home_features_test.dart`（置顶/统计页/直达提问的 widget 测试）。
 注意：AppBackground 存在无限循环动画，widget 测试中不可使用 `pumpAndSettle`，
 需用固定时长的 `tester.pump()`。
 
