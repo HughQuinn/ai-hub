@@ -79,4 +79,32 @@ void main() {
       expect(await storage.pruneHistory(keepWeeks: 12), 0);
     });
   });
+
+  group('StorageService 最近打开记录', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      storage = StorageService();
+      await storage.init();
+    });
+
+    test('默认为空，写入后可读回（服务名可含下划线）', () async {
+      expect(await storage.getAllLastOpened(), isEmpty);
+
+      await storage.setLastOpened('Kimi', timestampMs: 1000);
+      await storage.setLastOpened('my_ai_bot', timestampMs: 2000);
+      await storage.setLastOpened('DeepSeek'); // 不传时间戳则取当前时间
+
+      final all = await storage.getAllLastOpened();
+      expect(all['Kimi'], 1000);
+      expect(all['my_ai_bot'], 2000);
+      expect(all.containsKey('DeepSeek'), isTrue);
+      expect(all.length, 3);
+    });
+
+    test('重复写入覆盖旧时间戳', () async {
+      await storage.setLastOpened('Kimi', timestampMs: 1000);
+      await storage.setLastOpened('Kimi', timestampMs: 9999);
+      expect((await storage.getAllLastOpened())['Kimi'], 9999);
+    });
+  });
 }

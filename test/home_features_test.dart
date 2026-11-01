@@ -18,7 +18,7 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: 'AI Hub',
       packageName: 'com.xuqiyi.aihub',
-      version: '1.4.0',
+      version: '1.5.0',
       buildNumber: '2',
       buildSignature: '',
     );
@@ -92,5 +92,25 @@ void main() {
     expect(find.text('问 Kimi'), findsOneWidget);
     expect(find.text('问 豆包'), findsOneWidget);
     expect(find.text('问 DeepSeek'), findsOneWidget);
+  });
+
+  testWidgets('打开服务后出现在最近使用行，输入搜索词时隐藏', (tester) async {
+    await pumpApp(tester);
+
+    expect(find.byIcon(Icons.history), findsNothing);
+
+    // 点击 Kimi 卡片（通道 mock 放行），最近使用行出现
+    await tester.tap(find.text('Kimi'));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byIcon(Icons.history), findsOneWidget);
+    final lastOpened = await storage.getAllLastOpened();
+    expect(lastOpened.keys, contains('Kimi'));
+
+    // 输入搜索词后最近行让位于直达提问入口
+    await tester.enterText(find.byType(TextField), '写周报');
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byIcon(Icons.history), findsNothing);
+    expect(find.text('问 Kimi'), findsOneWidget);
   });
 }

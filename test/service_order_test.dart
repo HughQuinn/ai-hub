@@ -57,4 +57,39 @@ void main() {
       expect(services.map((s) => s.name), ['A', 'B', 'C']);
     });
   });
+
+  group('ServiceOrderUtils.mostRecent', () {
+    test('按最近打开时间降序排列', () {
+      final services = [_service('A'), _service('B'), _service('C')];
+      final result = ServiceOrderUtils.mostRecent(services, (s) => s.name,
+          {'A': 100, 'B': 300, 'C': 200});
+      expect(result.map((s) => s.name), ['B', 'C', 'A']);
+    });
+
+    test('limit 截断数量', () {
+      final services = [_service('A'), _service('B'), _service('C')];
+      final result = ServiceOrderUtils.mostRecent(services, (s) => s.name,
+          {'A': 100, 'B': 300, 'C': 200}, limit: 2);
+      expect(result.map((s) => s.name), ['B', 'C']);
+    });
+
+    test('从未打开的服务不参与', () {
+      final services = [_service('A'), _service('B')];
+      final result = ServiceOrderUtils.mostRecent(
+          services, (s) => s.name, {'B': 100});
+      expect(result.map((s) => s.name), ['B']);
+    });
+
+    test('空时间记录返回空列表', () {
+      final services = [_service('A'), _service('B')];
+      expect(ServiceOrderUtils.mostRecent(services, (s) => s.name, {}), isEmpty);
+    });
+
+    test('时间相同的按原顺序稳定排列', () {
+      final services = [_service('A'), _service('B'), _service('C')];
+      final result = ServiceOrderUtils.mostRecent(services, (s) => s.name,
+          {'A': 100, 'B': 100, 'C': 100});
+      expect(result.map((s) => s.name), ['A', 'B', 'C']);
+    });
+  });
 }
