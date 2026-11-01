@@ -81,6 +81,23 @@ void main() {
     expect(find.text('Kimi'), findsOneWidget);
   });
 
+  testWidgets('打开服务后切到统计 Tab 应显示最新使用记录', (tester) async {
+    await pumpApp(tester);
+
+    // 打开 Kimi（通道 mock 放行），产生本周点击
+    await tester.tap(find.text('Kimi'));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // 切到统计 Tab：MainShell 会触发 StatsPage.refresh
+    await tester.tap(find.text('统计'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 不应停留在空状态，且本周 Top 含 Kimi
+    expect(find.textContaining('本周还没有使用记录'), findsNothing);
+    expect(find.text('使用统计'), findsOneWidget);
+    expect(find.text('Kimi'), findsWidgets);
+  });
+
   testWidgets('搜索词非空时出现 AI 直达提问入口', (tester) async {
     await pumpApp(tester);
 
