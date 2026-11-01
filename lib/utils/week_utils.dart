@@ -27,10 +27,25 @@ class WeekUtils {
     return (int.parse(match.group(1)!), int.parse(match.group(2)!));
   }
 
-  /// 返回指定 ISO 周所在年份中第 [week] 周的周一日期。
+  /// 返回指定时刻所属的 ISO 周（周年份 + 周号）。
   ///
-  /// 注意：跨年边界（1 月初）的周可能被记录为当前年份 + 上一年周号，
-  /// 此时推算出的周一会偏晚，仅影响清理时多保留几天数据，无实际危害。
+  /// 1 月初的日期可能属于上一 ISO 年的最后一周，例如 2027-01-01（周五）
+  /// 属于 2026 年 W53；此前 getCurrentWeekKey 会把它错记为 2027_W53，
+  /// 导致跨年边界处的计数键与历史清理推算错位。
+  static (int, int) isoWeekYearWeek(DateTime now) {
+    final year = now.year;
+    final jan4 = DateTime(year, 1, 4);
+    final week1Monday = jan4.subtract(Duration(days: jan4.weekday - 1));
+    if (now.isBefore(week1Monday)) {
+      final prevJan4 = DateTime(year - 1, 1, 4);
+      final prevWeek1Monday =
+          prevJan4.subtract(Duration(days: prevJan4.weekday - 1));
+      return (year - 1, now.difference(prevWeek1Monday).inDays ~/ 7 + 1);
+    }
+    return (year, now.difference(week1Monday).inDays ~/ 7 + 1);
+  }
+
+  /// 返回指定 ISO 周所在年份中第 [week] 周的周一日期。
   static DateTime weekMonday(int year, int week) {
     final jan4 = DateTime(year, 1, 4);
     final week1Monday = jan4.subtract(Duration(days: jan4.weekday - 1));
@@ -39,7 +54,8 @@ class WeekUtils {
 
   /// 返回当前 ISO 周的周一日期。
   static DateTime currentWeekMonday() {
-    return weekMonday(getCurrentYear(), getCurrentWeekNumber());
+    final (year, week) = isoWeekYearWeek(DateTime.now());
+    return weekMonday(year, week);
   }
 
   /// 按时间先后比较两个周键（先比年份，再比周号）。
@@ -80,37 +96,14 @@ class WeekUtils {
   }
 
   /// Returns the current ISO week number (1-53).
-  ///
-  /// Uses ISO 8601 standard: week 1 contains the first Thursday of the year.
   static int getCurrentWeekNumber() {
-    final now = DateTime.now();
-    final year = now.year;
-
-    // Jan 4 is always in week 1 of the year
-    final jan4 = DateTime(year, 1, 4);
-
-    // Find the Monday of the week containing Jan 4
-    final week1Monday = jan4.subtract(Duration(days: jan4.weekday - 1));
-
-    // If current date is before week 1 Monday, it's in the last week of previous year
-    if (now.isBefore(week1Monday)) {
-      final prevYear = year - 1;
-      final prevJan4 = DateTime(prevYear, 1, 4);
-      final prevWeek1Monday =
-          prevJan4.subtract(Duration(days: prevJan4.weekday - 1));
-      final daysSincePrevWeek1 = now.difference(prevWeek1Monday).inDays;
-      return (daysSincePrevWeek1 ~/ 7) + 1;
-    }
-
-    // Calculate week number for this year
-    final daysSinceWeek1Monday = now.difference(week1Monday).inDays;
-    return (daysSinceWeek1Monday ~/ 7) + 1;
+    return isoWeekYearWeek(DateTime.now()).$2;
   }
 
   /// Returns the current week key in format "service_clicks_{year}_W{week}".
+  /// 年份取 ISO 周年，1 月初的日期归入上一年的最后一周。
   static String getCurrentWeekKey() {
-    final year = getCurrentYear();
-    final week = getCurrentWeekNumber();
+    final (year, week) = isoWeekYearWeek(DateTime.now());
     return 'service_clicks_${year}_W$week';
   }
 }

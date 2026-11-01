@@ -86,6 +86,43 @@ void main() {
     });
   });
 
+  group('WeekUtils.isoWeekYearWeek', () {
+    test('平年正常日期', () {
+      expect(WeekUtils.isoWeekYearWeek(DateTime(2026, 11, 2)), (2026, 45));
+    });
+
+    test('1 月 1 日属于上一 ISO 年的最后一周（2027-01-01 → 2026 W53）', () {
+      expect(WeekUtils.isoWeekYearWeek(DateTime(2027, 1, 1)), (2026, 53));
+      expect(WeekUtils.isoWeekYearWeek(DateTime(2027, 1, 3)), (2026, 53));
+    });
+
+    test('周一年之前的日期归入当年 W1 之后的正常周（2026-01-01 → 2026 W1）', () {
+      expect(WeekUtils.isoWeekYearWeek(DateTime(2026, 1, 1)), (2026, 1));
+      expect(WeekUtils.isoWeekYearWeek(DateTime(2026, 1, 5)), (2026, 2));
+    });
+
+    test('年末的 53 周周一（2024-12-30 → 2024 W53）', () {
+      expect(WeekUtils.isoWeekYearWeek(DateTime(2024, 12, 30)), (2024, 53));
+      // 该周周日仍属于 2024 W53
+      expect(WeekUtils.isoWeekYearWeek(DateTime(2025, 1, 1, 12)), (2025, 1));
+    });
+
+    test('与 weekMonday/weekKeyForMonday 互逆', () {
+      for (final date in [
+        DateTime(2026, 11, 2),
+        DateTime(2027, 1, 1),
+        DateTime(2024, 12, 30),
+      ]) {
+        final (year, week) = WeekUtils.isoWeekYearWeek(date);
+        expect(WeekUtils.weekMonday(year, week).weekday, DateTime.monday);
+        expect(date.difference(WeekUtils.weekMonday(year, week)).inDays,
+            inInclusiveRange(0, 6));
+        expect(WeekUtils.weekKeyForMonday(WeekUtils.weekMonday(year, week)),
+            'service_clicks_${year}_W$week');
+      }
+    });
+  });
+
   group('WeekUtils.compareWeekKeys', () {
     test('跨年与多位周号均按时间排序', () {
       final keys = [
