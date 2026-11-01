@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:ai_hub/config/services_config.dart';
+import 'package:ai_hub/models/ai_service.dart';
 import 'package:ai_hub/services/app_info.dart';
+import 'package:ai_hub/services/reachability_service.dart';
 import 'package:ai_hub/services/storage_service.dart';
 import 'package:ai_hub/services/update_service.dart';
 import 'package:ai_hub/config/theme_config.dart';
@@ -140,6 +143,15 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildGroup(
                   isDark: isDark,
                   children: [
+                    _buildTile(
+                      icon: Icons.network_check,
+                      iconColor: Colors.teal,
+                      title: '服务可达性检测',
+                      subtitle: '手动检测各服务当前是否可访问',
+                      secondaryColor: secondaryColor,
+                      onTap: () => _showReachabilityDialog(context),
+                    ),
+                    _groupDivider(isDark),
                     _buildTile(
                       icon: Icons.delete_outline,
                       iconColor: Colors.red,
@@ -392,6 +404,13 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  void _showReachabilityDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => const _ReachabilityCheckDialog(),
+    );
+  }
+
   void _handleClearCache(BuildContext context) {
     showDialog(
       context: context,
@@ -425,6 +444,164 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 服务可达性检测对话框：并发探测内置 + 自定义服务，展示三档结果。
+class _ReachabilityCheckDialog extends StatefulWidget {
+  const _ReachabilityCheckDialog();
+
+  @override
+  State<_ReachabilityCheckDialog> createState() =>
+      _ReachabilityCheckDialogState();
+}
+
+class _ReachabilityCheckDialogState extends State<_ReachabilityCheckDialog> {
+  final ReachabilityService _reachabilityService = ReachabilityService();
+  List<ReachabilityResult>? _results;
+
+  @override
+  void initState() {
+    super.initState();
+    _runCheck();
+  }
+
+  Future<void> _runCheck() async {
+    setState(() => _results = null);
+    final storage =
+        Provider.of<StorageService>(context, listen: false);
+    final customPlatforms = await storage.getCustomPlatforms();
+    final customServices = customPlatforms.map((p) {
+      return AiService(
+        name: p['name'] as String,
+        url: p['url'] as String,
+        description: (p['description'] as String?) ?? '',
+        region: (p['region'] as String?) ?? 'domestic',
+        isCustom: true,
+      );
+    }).toList();
+
+    final results =
+        await _reachabilityService.checkAll([...aiServices, ...customServices]);
+    if (!mounted) return;
+    setState(() => _results = results);
+  }
+
+  String _statusText(ReachabilityStatus status) {
+    switch (status) {
+      case ReachabilityStatus.ok:
+        return '正常';
+      case ReachabilityStatus.restricted:
+        return '访问受限';
+      case ReachabilityStatus.unreachable:
+        return '无法访问';
+    }
+  }
+
+  Color _statusColor(ReachabilityStatus status) {
+    switch (status) {
+      case ReachabilityStatus.ok:
+        return const Color(0xFF4CAF50);
+      case ReachabilityStatus.restricted:
+        return const Color(0xFFFF6B35);
+      case ReachabilityStatus.unreachable:
+        return const Color(0xFFE53935);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final secondaryColor = AppColors.secondaryText(isDark: isDark);
+
+    return AlertDialog(
+      title: const Text('服务可达性检测'),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 380,
+        child: _results == null
+            ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    Text('正在检测，最长约 5 秒...',
+                        style: TextStyle(fontSize: 13, color: secondaryColor)),
+                  ],
+                ),
+              )
+            : ListView.separated(
+                itemCount: _results!.length,
+                separatorBuilder: (_, _) => Divider(
+                  height: 1,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : Colors.black.withValues(alpha: 0.06),
+                ),
+                itemBuilder: (context, index) {
+                  final result = _results![index];
+                  final color = _statusColor(result.status);
+                  final subtitle = result.status == ReachabilityStatus.restricted
+                      ? '站点在线，但拦截了探测请求'
+                      : result.detail ?? 'HTTP ${result.statusCode ?? '-'}';
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                result.service.name,
+                                style: const TextStyle(
+                                    fontSize: 14, fontWeight: FontWeight.w500),
+                              ),
+                              Text(
+                                subtitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 11, color: secondaryColor),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          _statusText(result.status),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: color,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _runCheck,
+          child: const Text('重新检测'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('关闭'),
+        ),
+      ],
     );
   }
 }

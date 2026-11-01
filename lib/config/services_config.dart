@@ -11,6 +11,7 @@ final List<AiService> aiServices = [
     packageName: 'com.moonshot.kimichat',
     region: 'domestic',
     needVpn: false,
+    askUrlTemplate: 'https://kimi.moonshot.cn/search?q={q}',
   ),
   AiService(
     name: '豆包',
@@ -20,6 +21,7 @@ final List<AiService> aiServices = [
     packageName: 'com.larus.nova',
     region: 'domestic',
     needVpn: false,
+    askUrlTemplate: 'https://www.doubao.com/search?q={q}',
   ),
   AiService(
     name: 'DeepSeek',
@@ -74,6 +76,7 @@ final List<AiService> aiServices = [
     packageName: 'com.tencent.hunyuan.app.chat',
     region: 'domestic',
     needVpn: false,
+    askUrlTemplate: 'https://yuanbao.tencent.com/search?q={q}',
   ),
   AiService(
     name: 'Coze',
@@ -121,6 +124,7 @@ final List<AiService> aiServices = [
     packageName: null,
     region: 'overseas',
     needVpn: true,
+    askUrlTemplate: 'https://chatgpt.com/?q={q}',
   ),
   AiService(
     name: 'Claude',
@@ -130,6 +134,7 @@ final List<AiService> aiServices = [
     packageName: null,
     region: 'overseas',
     needVpn: true,
+    askUrlTemplate: 'https://claude.ai/new?q={q}',
   ),
   AiService(
     name: 'Gemini',
@@ -148,6 +153,7 @@ final List<AiService> aiServices = [
     packageName: null,
     region: 'overseas',
     needVpn: true,
+    askUrlTemplate: 'https://www.perplexity.ai/search?q={q}',
   ),
   AiService(
     name: 'Copilot',
@@ -157,6 +163,7 @@ final List<AiService> aiServices = [
     packageName: null,
     region: 'overseas',
     needVpn: true,
+    askUrlTemplate: 'https://copilot.microsoft.com/?q={q}',
   ),
   AiService(
     name: 'Grok',
@@ -166,6 +173,7 @@ final List<AiService> aiServices = [
     packageName: null,
     region: 'overseas',
     needVpn: true,
+    askUrlTemplate: 'https://grok.com/?q={q}',
   ),
   AiService(
     name: 'Poe',

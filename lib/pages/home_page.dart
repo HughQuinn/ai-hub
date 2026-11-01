@@ -8,6 +8,7 @@ import '../config/theme_config.dart';
 import '../config/services_config.dart';
 import '../models/ai_service.dart';
 import '../services/storage_service.dart';
+import '../utils/service_order_utils.dart';
 import '../widgets/service_card.dart';
 import '../widgets/app_background.dart';
 
@@ -33,8 +34,9 @@ class HomePageState extends State<HomePage> {
   bool _isLoading = true;
   bool _initialized = false;
 
-  // 隐藏服务和自定义排序
+  // 隐藏服务、收藏置顶与自定义排序
   Set<String> _hiddenNames = {};
+  Set<String> _pinnedNames = {};
   List<String>? _customOrder;
   List<AiService> _customServices = [];
 
@@ -95,9 +97,11 @@ class HomePageState extends State<HomePage> {
   Future<void> _loadHiddenAndOrder() async {
     final hiddenList = await _storageService.getHiddenServices();
     final order = await _storageService.getCustomOrder();
+    final pinnedList = await _storageService.getPinnedServices();
     setState(() {
       _hiddenNames = hiddenList.toSet();
       _customOrder = order;
+      _pinnedNames = pinnedList.toSet();
     });
   }
 
@@ -176,7 +180,9 @@ class HomePageState extends State<HomePage> {
       services = [...domestic, ...overseas];
     }
 
-    return services;
+    // 收藏置顶拥有最高优先级，叠加在点击/自定义排序之上
+    return ServiceOrderUtils.applyPinnedOrder(
+        services, (s) => s.name, _pinnedNames);
   }
 
   List<AiService> get _filteredServices {
@@ -303,6 +309,7 @@ class HomePageState extends State<HomePage> {
                     opacity: opacity,
                     child: GestureDetector(
                       onTap: () => _openService(service),
+                      onLongPress: () => _showServiceActions(service),
                       child: Container(
                         width: cardWidth,
                         height: cardHeight,
@@ -404,6 +411,17 @@ class HomePageState extends State<HomePage> {
                                   ),
                                 ),
                               ),
+                            // 收藏置顶星标
+                            if (_pinnedNames.contains(service.name))
+                              const Positioned(
+                                top: 16,
+                                left: 16,
+                                child: Icon(
+                                  Icons.star_rounded,
+                                  size: 20,
+                                  color: Color(0xFFF59E0B),
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -472,16 +490,18 @@ class HomePageState extends State<HomePage> {
     return Icon(Icons.smart_toy_outlined, size: 48, color: Colors.white);
   }
 
-  Future<void> _openService(AiService service) async {
+  Future<void> _openService(AiService service, {String? urlOverride}) async {
     // 在任何 await 之前捕获，避免跨异步间隙使用 context
     final messenger = ScaffoldMessenger.of(context);
+    final targetUrl = urlOverride ?? service.url;
 
     await _storageService.incrementClick(service.name);
     final newCounts = await _storageService.getAllClickCounts();
     if (mounted) setState(() => _clickCounts = newCounts);
 
     try {
-      if (service.packageName != null) {
+      if (service.packageName != null && urlOverride == null) {
+        // 直达提问链接只对网页端有意义，客户端唤起仅在打开主页时生效
         final installed = await _channel.invokeMethod(
             'checkAppInstalled', {'packageName': service.packageName});
         if (installed == true) {
@@ -494,11 +514,11 @@ class HomePageState extends State<HomePage> {
           }
         }
       }
-      await _channel.invokeMethod('openUrl', {'url': service.url});
+      await _channel.invokeMethod('openUrl', {'url': targetUrl});
     } on PlatformException catch (e) {
       debugPrint('[AiHub] MethodChannel failed: ${e.message}');
       // 内置 WebView 打开失败时用系统浏览器兜底
-      final uri = Uri.tryParse(service.url);
+      final uri = Uri.tryParse(targetUrl);
       if (uri != null) {
         try {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -509,6 +529,196 @@ class HomePageState extends State<HomePage> {
         const SnackBar(content: Text('打开失败，请检查网络后重试')),
       );
     }
+  }
+
+  // ---- 收藏置顶与长按操作 ----
+
+  Future<void> _togglePin(AiService service) async {
+    final next = Set<String>.from(_pinnedNames);
+    final pinned = !next.remove(service.name);
+    if (pinned) next.add(service.name);
+    setState(() => _pinnedNames = next);
+    await _storageService.setPinnedServices(next.toList());
+    if (_pageController.hasClients) {
+      _pageController.jumpToPage(0);
+    }
+  }
+
+  /// 在浏览器中打开（不改变点击统计，仅作为长按菜单的旁路操作）
+  Future<void> _openInBrowser(AiService service) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final uri = Uri.tryParse(service.url);
+    if (uri == null) return;
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('浏览器打开失败')),
+      );
+    }
+  }
+
+  /// 隐藏平台，复用排序/隐藏页的 hidden_services 存储
+  Future<void> _hideService(AiService service) async {
+    final next = Set<String>.from(_hiddenNames)..add(service.name);
+    setState(() => _hiddenNames = next);
+    await _storageService.setHiddenServices(next.toList());
+  }
+
+  void _showServiceActions(AiService service) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isPinned = _pinnedNames.contains(service.name);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.cardBackground(isDark: isDark),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetCtx) {
+        final secondaryColor = AppColors.secondaryText(isDark: isDark);
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        service.name,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryText(isDark: isDark),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      service.description,
+                      style: TextStyle(fontSize: 12, color: secondaryColor),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: Icon(
+                  isPinned ? Icons.star_border : Icons.star,
+                  color: const Color(0xFFF59E0B),
+                ),
+                title: Text(isPinned ? '取消置顶' : '置顶'),
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  _togglePin(service);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.open_in_browser),
+                title: const Text('在浏览器打开'),
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  _openInBrowser(service);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.visibility_off_outlined),
+                title: const Text('隐藏该平台'),
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  _hideService(service);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('已隐藏，可在 设置-排序/隐藏平台 恢复')),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ---- AI 直达提问 ----
+
+  /// 用搜索框中的问题直达所选 AI：
+  /// 配置了 askUrlTemplate 的服务直接拼链接打开，
+  /// 其余服务复制问题到剪贴板后打开主页，粘贴即问。
+  Future<void> _askService(AiService service, String query) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final askUrl = service.buildAskUrl(query);
+
+    if (askUrl == null) {
+      await Clipboard.setData(ClipboardData(text: query.trim()));
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('问题已复制，打开「${service.name}」后粘贴发送')),
+        );
+      }
+    }
+
+    await _openService(service, urlOverride: askUrl?.toString());
+  }
+
+  /// 搜索词非空时显示「问 XX」直达入口，覆盖全部可见服务（不随搜索结果过滤）
+  Widget _buildAskRow(bool isDark) {
+    if (_searchQuery.trim().isEmpty) return const SizedBox.shrink();
+    final services = _sortedServices;
+    if (services.isEmpty) return const SizedBox.shrink();
+    final secondaryColor = AppColors.secondaryText(isDark: isDark);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: SizedBox(
+        height: 36,
+        child: Row(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: Text('提问:', style: TextStyle(fontSize: 13, color: secondaryColor)),
+            ),
+            Expanded(
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                itemCount: services.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final service = services[index];
+                  return GestureDetector(
+                    onTap: () => _askService(service, _searchQuery),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.searchBackground(isDark: isDark),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: AppColors.searchBorder(isDark: isDark)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.send_outlined,
+                              size: 13, color: const Color(0xFF3B82F6)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '问 ${service.name}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.primaryText(isDark: isDark),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -606,6 +816,8 @@ class HomePageState extends State<HomePage> {
               ),
             ),
           ),
+          // AI 直达提问入口（搜索词非空时出现）
+          _buildAskRow(isDark),
           Expanded(
             child: _viewModeCard
                 ? _buildCardView(filtered, isDark)
@@ -651,7 +863,9 @@ class HomePageState extends State<HomePage> {
                         child: ServiceCard(
                           service: service,
                           hasClient: _installedClients[service.name] ?? false,
+                          isPinned: _pinnedNames.contains(service.name),
                           onTap: () => _openService(service),
+                          onLongPress: () => _showServiceActions(service),
                         ),
                       );
                     },

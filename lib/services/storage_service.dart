@@ -87,4 +87,49 @@ class StorageService {
   Future<void> setLanguage(String languageCode) async {
     await _prefs?.setString('language', languageCode);
   }
+
+  /// Get the list of pinned (置顶) service names.
+  Future<List<String>> getPinnedServices() async {
+    return _prefs?.getStringList('pinned_services') ?? [];
+  }
+
+  /// Set the list of pinned (置顶) service names.
+  Future<void> setPinnedServices(List<String> services) async {
+    await _prefs?.setStringList('pinned_services', services);
+  }
+
+  /// 读取全部历史周点击数据：{weekKey: {serviceName: count}}。
+  /// 历史周键随时间自然累积，与 [getAllClickCounts]（仅本周）互补。
+  Future<Map<String, Map<String, int>>> getWeeklyHistory() async {
+    final result = <String, Map<String, int>>{};
+    if (_prefs == null) return result;
+    for (final key in _prefs!.getKeys()) {
+      final parts = WeekUtils.splitClickStorageKey(key);
+      if (parts == null) continue;
+      final (weekKey, serviceName) = parts;
+      (result[weekKey] ??= {})[serviceName] = _prefs!.getInt(key) ?? 0;
+    }
+    return result;
+  }
+
+  /// 删除 [keepWeeks] 周之前的历史点击记录，返回删除的记录条数。
+  Future<int> pruneHistory({int keepWeeks = 12}) async {
+    if (_prefs == null) return 0;
+    final cutoff = WeekUtils.currentWeekMonday()
+        .subtract(Duration(days: (keepWeeks - 1) * 7));
+    var removed = 0;
+    for (final key in _prefs!.getKeys().toList()) {
+      final parts = WeekUtils.splitClickStorageKey(key);
+      if (parts == null) continue;
+      final (weekKey, _) = parts;
+      final parsed = WeekUtils.parseWeekKey(weekKey);
+      if (parsed == null) continue;
+      final (year, week) = parsed;
+      if (WeekUtils.weekMonday(year, week).isBefore(cutoff)) {
+        await _prefs!.remove(key);
+        removed++;
+      }
+    }
+    return removed;
+  }
 }

@@ -6,9 +6,18 @@ import '../models/ai_service.dart';
 class ServiceCard extends StatelessWidget {
   final AiService service;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final bool hasClient;
+  final bool isPinned;
 
-  const ServiceCard({super.key, required this.service, this.onTap, this.hasClient = false});
+  const ServiceCard({
+    super.key,
+    required this.service,
+    this.onTap,
+    this.onLongPress,
+    this.hasClient = false,
+    this.isPinned = false,
+  });
 
   Widget _buildIcon(String? path, IconData? iconData) {
     if (path != null) {
@@ -50,6 +59,7 @@ class ServiceCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           splashColor: primaryColor.withValues(alpha: 0.1),
           onTap: onTap,
+          onLongPress: onLongPress,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -88,6 +98,16 @@ class ServiceCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (isPinned)
+                Positioned(
+                  left: 8,
+                  top: 8,
+                  child: Icon(
+                    Icons.star_rounded,
+                    size: 16,
+                    color: const Color(0xFFF59E0B),
+                  ),
+                ),
               if (service.needVpn)
                 Positioned(
                   right: 8,

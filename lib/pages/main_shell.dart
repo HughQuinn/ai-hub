@@ -3,6 +3,7 @@ import '../config/theme_config.dart';
 import '../widgets/update_dialog.dart';
 import 'home_page.dart';
 import 'settings_page.dart';
+import 'stats_page.dart';
 
 class MainShell extends StatefulWidget {
   final Map<String, dynamic>? initialUpdate;
@@ -48,6 +49,7 @@ class _MainShellState extends State<MainShell> {
 
     final pages = [
       HomePage(key: _homePageKey),
+      const StatsPage(),
       SettingsPage(onRefreshHome: () => _homePageKey.currentState?.refreshServices()),
     ];
 
@@ -70,6 +72,10 @@ class _MainShellState extends State<MainShell> {
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home),
             label: '主页',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.insights),
+            label: '统计',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings_outlined),
