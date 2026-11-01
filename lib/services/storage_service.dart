@@ -132,4 +132,23 @@ class StorageService {
     }
     return removed;
   }
+
+  /// 记录服务最近一次打开时间（毫秒时间戳），键为 last_opened_{name}。
+  Future<void> setLastOpened(String serviceName, {int? timestampMs}) async {
+    final ts = timestampMs ?? DateTime.now().millisecondsSinceEpoch;
+    await _prefs?.setInt('last_opened_$serviceName', ts);
+  }
+
+  /// 读取全部最近打开时间：{serviceName: epochMs}，从未打开的服务不出现。
+  Future<Map<String, int>> getAllLastOpened() async {
+    const prefix = 'last_opened_';
+    final result = <String, int>{};
+    if (_prefs == null) return result;
+    for (final key in _prefs!.getKeys()) {
+      if (!key.startsWith(prefix)) continue;
+      final ts = _prefs!.getInt(key);
+      if (ts != null) result[key.substring(prefix.length)] = ts;
+    }
+    return result;
+  }
 }

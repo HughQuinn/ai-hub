@@ -34,9 +34,10 @@ class HomePageState extends State<HomePage> {
   bool _isLoading = true;
   bool _initialized = false;
 
-  // 隐藏服务、收藏置顶与自定义排序
+  // 隐藏服务、收藏置顶、最近使用与自定义排序
   Set<String> _hiddenNames = {};
   Set<String> _pinnedNames = {};
+  Map<String, int> _lastOpened = {};
   List<String>? _customOrder;
   List<AiService> _customServices = [];
 
@@ -89,8 +90,10 @@ class HomePageState extends State<HomePage> {
 
   Future<void> _loadClickCounts() async {
     final counts = await _storageService.getAllClickCounts();
+    final lastOpened = await _storageService.getAllLastOpened();
     setState(() {
       _clickCounts = counts;
+      _lastOpened = lastOpened;
     });
   }
 
@@ -496,8 +499,15 @@ class HomePageState extends State<HomePage> {
     final targetUrl = urlOverride ?? service.url;
 
     await _storageService.incrementClick(service.name);
+    await _storageService.setLastOpened(service.name);
     final newCounts = await _storageService.getAllClickCounts();
-    if (mounted) setState(() => _clickCounts = newCounts);
+    final lastOpened = await _storageService.getAllLastOpened();
+    if (mounted) {
+      setState(() {
+        _clickCounts = newCounts;
+        _lastOpened = lastOpened;
+      });
+    }
 
     try {
       if (service.packageName != null && urlOverride == null) {
@@ -623,6 +633,19 @@ class HomePageState extends State<HomePage> {
                 },
               ),
               ListTile(
+                leading: const Icon(Icons.link),
+                title: const Text('复制链接'),
+                onTap: () async {
+                  Navigator.of(sheetCtx).pop();
+                  await Clipboard.setData(ClipboardData(text: service.url));
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('链接已复制')),
+                    );
+                  }
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.visibility_off_outlined),
                 title: const Text('隐藏该平台'),
                 onTap: () {
@@ -637,6 +660,71 @@ class HomePageState extends State<HomePage> {
           ),
         );
       },
+    );
+  }
+
+  // ---- 最近使用 ----
+
+  /// 无搜索词时显示最近打开的服务（最多 5 个，隐藏的不过滤展示自 _sortedServices）
+  Widget _buildRecentRow(bool isDark) {
+    if (_searchQuery.trim().isNotEmpty) return const SizedBox.shrink();
+    final recents = ServiceOrderUtils.mostRecent(
+      _sortedServices,
+      (s) => s.name,
+      _lastOpened,
+    );
+    if (recents.isEmpty) return const SizedBox.shrink();
+    final secondaryColor = AppColors.secondaryText(isDark: isDark);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: SizedBox(
+        height: 36,
+        child: Row(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: Text('最近:', style: TextStyle(fontSize: 13, color: secondaryColor)),
+            ),
+            Expanded(
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                itemCount: recents.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final service = recents[index];
+                  return GestureDetector(
+                    onTap: () => _openService(service),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.searchBackground(isDark: isDark),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: AppColors.searchBorder(isDark: isDark)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.history, size: 14, color: secondaryColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            service.name,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.primaryText(isDark: isDark),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -816,7 +904,8 @@ class HomePageState extends State<HomePage> {
               ),
             ),
           ),
-          // AI 直达提问入口（搜索词非空时出现）
+          // 最近使用（无搜索词时）与 AI 直达提问（有搜索词时）
+          _buildRecentRow(isDark),
           _buildAskRow(isDark),
           Expanded(
             child: _viewModeCard

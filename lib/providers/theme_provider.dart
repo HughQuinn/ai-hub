@@ -35,6 +35,14 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 当前主题模式对应的持久化字符串（dark/light/system），供配置备份使用。
+  String get themeModeKey => _themeModeToString(_themeMode);
+
+  /// 从持久化字符串恢复主题模式，未知值回退为深色。
+  void setThemeModeFromKey(String key) {
+    setThemeMode(_themeModeFromString(key));
+  }
+
   String _themeModeToString(ThemeMode mode) {
     switch (mode) {
       case ThemeMode.dark:

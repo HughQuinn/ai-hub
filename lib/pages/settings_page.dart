@@ -11,6 +11,7 @@ import 'package:ai_hub/config/theme_config.dart';
 import 'package:ai_hub/pages/add_platform_page.dart';
 import 'package:ai_hub/pages/sort_hide_page.dart';
 import 'package:ai_hub/providers/theme_provider.dart';
+import 'package:ai_hub/utils/backup_codec.dart';
 import 'package:ai_hub/widgets/update_dialog.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -143,6 +144,24 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildGroup(
                   isDark: isDark,
                   children: [
+                    _buildTile(
+                      icon: Icons.upload_outlined,
+                      iconColor: Colors.blue,
+                      title: '导出配置',
+                      subtitle: '复制配置 JSON 到剪贴板',
+                      secondaryColor: secondaryColor,
+                      onTap: _exportBackup,
+                    ),
+                    _groupDivider(isDark),
+                    _buildTile(
+                      icon: Icons.download_outlined,
+                      iconColor: Colors.purple,
+                      title: '从剪贴板导入',
+                      subtitle: '粘贴备份 JSON，校验后恢复',
+                      secondaryColor: secondaryColor,
+                      onTap: _importBackup,
+                    ),
+                    _groupDivider(isDark),
                     _buildTile(
                       icon: Icons.network_check,
                       iconColor: Colors.teal,
@@ -402,6 +421,120 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
+  }
+
+  // ---- 配置备份与恢复 ----
+
+  /// 导出当前配置为备份 JSON 并复制到剪贴板。
+  Future<void> _exportBackup() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final themeProvider = context.read<ThemeProvider>();
+
+    final platforms = await _storageService.getCustomPlatforms();
+    final hidden = await _storageService.getHiddenServices();
+    final order = await _storageService.getCustomOrder();
+    final pins = await _storageService.getPinnedServices();
+    final language = await _storageService.getLanguage();
+
+    final json = BackupCodec.encode(
+      customPlatforms: platforms,
+      hiddenServices: hidden,
+      customOrder: order ?? const [],
+      pinnedServices: pins,
+      language: language,
+      themeMode: themeProvider.themeModeKey,
+    );
+    await Clipboard.setData(ClipboardData(text: json));
+    if (!mounted) return;
+    messenger.showSnackBar(
+      const SnackBar(content: Text('配置已复制到剪贴板，妥善保存即可迁移到新设备')),
+    );
+  }
+
+  /// 从剪贴板读取备份 JSON，校验通过后展示预览并确认导入。
+  Future<void> _importBackup() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final themeProvider = context.read<ThemeProvider>();
+    final onRefreshHome = widget.onRefreshHome;
+
+    final clip = await Clipboard.getData('text/plain');
+    final raw = clip?.text?.trim() ?? '';
+    if (raw.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('剪贴板为空，请先在其他设备上导出配置')),
+      );
+      return;
+    }
+
+    final Map<String, dynamic> data;
+    try {
+      data = BackupCodec.decode(raw);
+    } on FormatException catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('导入失败：${e.message}')),
+      );
+      return;
+    }
+    if (!mounted) return;
+
+    final platforms = BackupCodec.platformList(data);
+    final hidden = BackupCodec.stringList(data, 'hiddenServices');
+    final order = BackupCodec.stringList(data, 'customOrder');
+    final pins = BackupCodec.stringList(data, 'pinnedServices');
+    final language = data['language'] as String?;
+    final themeKey = data['themeMode'] as String?;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('确认导入'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('将应用以下配置：'),
+            const SizedBox(height: 8),
+            Text('自定义平台：${platforms.length} 个', style: const TextStyle(fontSize: 13)),
+            Text('隐藏平台：${hidden.length} 项', style: const TextStyle(fontSize: 13)),
+            Text('自定义排序：${order.isEmpty ? '未设置' : '${order.length} 项'}',
+                style: const TextStyle(fontSize: 13)),
+            Text('置顶服务：${pins.length} 个', style: const TextStyle(fontSize: 13)),
+            if (language != null)
+              Text('语言：$language', style: const TextStyle(fontSize: 13)),
+            if (themeKey != null)
+              Text('深色模式：$themeKey', style: const TextStyle(fontSize: 13)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('导入'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await _storageService.saveCustomPlatforms(platforms);
+    await _storageService.setHiddenServices(hidden);
+    await _storageService.setCustomOrder(order);
+    await _storageService.setPinnedServices(pins);
+    if (language != null) {
+      await _storageService.setLanguage(language);
+    }
+    if (themeKey != null) {
+      themeProvider.setThemeModeFromKey(themeKey);
+    }
+    if (language != null && mounted) {
+      setState(() => _currentLanguage = language);
+    }
+    onRefreshHome?.call();
+    if (!mounted) return;
+    messenger.showSnackBar(const SnackBar(content: Text('导入成功')));
   }
 
   void _showReachabilityDialog(BuildContext context) {

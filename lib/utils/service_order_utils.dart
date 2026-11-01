@@ -14,4 +14,25 @@ class ServiceOrderUtils {
     final rest = items.where((s) => !pinnedNames.contains(nameOf(s)));
     return [...pinned, ...rest];
   }
+
+  /// 按最近打开时间降序取前 [limit] 个；从未打开的服务不参与，
+  /// 时间相同的按传入顺序稳定排列（List.sort 不保证稳定，用下标辅助）。
+  static List<T> mostRecent<T>(
+    List<T> items,
+    String Function(T) nameOf,
+    Map<String, int> lastOpenedMs, {
+    int limit = 5,
+  }) {
+    final entries = <MapEntry<T, int>>[];
+    for (final item in items) {
+      final ts = lastOpenedMs[nameOf(item)];
+      if (ts != null) entries.add(MapEntry(item, ts));
+    }
+    final indices = List<int>.generate(entries.length, (i) => i);
+    indices.sort((a, b) {
+      final byTime = entries[b].value.compareTo(entries[a].value);
+      return byTime != 0 ? byTime : a.compareTo(b);
+    });
+    return indices.take(limit).map((i) => entries[i].key).toList();
+  }
 }
