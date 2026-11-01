@@ -18,7 +18,7 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: 'AI Hub',
       packageName: 'com.xuqiyi.aihub',
-      version: '1.6.0',
+      version: '1.7.0',
       buildNumber: '2',
       buildSignature: '',
     );
@@ -79,6 +79,34 @@ void main() {
 
     expect(find.text('AI Hub'), findsOneWidget);
     expect(find.text('Kimi'), findsOneWidget);
+  });
+
+  testWidgets('置顶后向原生同步桌面快捷方式（通道契约）', (tester) async {
+    final shortcutCalls = <Map<String, dynamic>>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('com.aihub.webview'),
+      (call) async {
+        if (call.method == 'updateShortcuts') {
+          shortcutCalls.add(Map<String, dynamic>.from(call.arguments as Map));
+          return null;
+        }
+        return call.method == 'checkAppInstalled' ? false : null;
+      },
+    );
+
+    await pumpApp(tester);
+
+    await tester.longPress(find.text('Kimi'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('置顶'));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(shortcutCalls, isNotEmpty);
+    final names = (shortcutCalls.last['shortcuts'] as List)
+        .map((e) => (e as Map)['name'])
+        .toList();
+    expect(names, contains('Kimi'));
   });
 
   testWidgets('打开服务后切到统计 Tab 应显示最新使用记录', (tester) async {

@@ -3,7 +3,10 @@ package com.example.ai_hub
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.webkit.WebView
+import androidx.core.content.pm.ShortcutInfoCompat
+import androidx.core.content.pm.ShortcutManagerCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -84,8 +87,56 @@ class MainActivity : FlutterActivity() {
                             result.error("CLEAR_CACHE_FAILED", e.message, null)
                         }
                     }
+                    "updateShortcuts" -> {
+                        try {
+                            // 整体替换动态快捷方式；低于 API 25 由 ShortcutManagerCompat 自动降级为 no-op
+                            val items = call.argument<List<Map<String, Any>>>("shortcuts") ?: emptyList()
+                            val shortcuts = items.mapIndexedNotNull { index, item ->
+                                val name = item["name"] as? String ?: return@mapIndexedNotNull null
+                                val url = item["url"] as? String ?: return@mapIndexedNotNull null
+                                val id = (item["id"] as? String) ?: "service_$index"
+                                val intent = Intent(this, MainActivity::class.java)
+                                    .setAction(Intent.ACTION_VIEW)
+                                    .putExtra(EXTRA_SHORTCUT_URL, url)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                ShortcutInfoCompat.Builder(this, id)
+                                    .setShortLabel(name)
+                                    .setIntent(intent)
+                                    .build()
+                            }
+                            ShortcutManagerCompat.setDynamicShortcuts(this, shortcuts)
+                            result.success(null)
+                        } catch (e: Exception) {
+                            result.error("SHORTCUTS_FAILED", e.message, null)
+                        }
+                    }
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) {
+            handleShortcutIntent(intent)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleShortcutIntent(intent)
+    }
+
+    /// 快捷方式以显式意图打开 MainActivity（singleTop），带 url 时转交内置 WebView
+    private fun handleShortcutIntent(intent: Intent?) {
+        val url = intent?.getStringExtra(EXTRA_SHORTCUT_URL) ?: return
+        if (url.isEmpty()) return
+        val webIntent = Intent(this, WebViewActivity::class.java)
+        webIntent.putExtra("url", url)
+        startActivity(webIntent)
+    }
+
+    companion object {
+        const val EXTRA_SHORTCUT_URL = "shortcut_url"
     }
 }

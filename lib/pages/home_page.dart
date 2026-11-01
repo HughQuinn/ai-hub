@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/theme_config.dart';
 import '../config/services_config.dart';
 import '../models/ai_service.dart';
+import '../services/app_shortcuts_service.dart';
 import '../services/storage_service.dart';
 import '../utils/service_order_utils.dart';
 import '../widgets/service_card.dart';
@@ -68,6 +69,25 @@ class HomePageState extends State<HomePage> {
     await _loadCustomPlatforms();
     setState(() => _isLoading = false);
     _checkInstalledClients();
+    await _syncShortcuts();
+  }
+
+  /// 把置顶服务与最近使用同步为桌面长按图标的快捷方式（置顶优先，补足到上限）
+  Future<void> _syncShortcuts() async {
+    final visible = _sortedServices;
+    final pinnedVisible =
+        visible.where((s) => _pinnedNames.contains(s.name));
+    final recent = ServiceOrderUtils.mostRecent(
+      visible,
+      (s) => s.name,
+      _lastOpened,
+      limit: AppShortcutsService.maxShortcuts,
+    );
+    final merged = <AiService>[
+      ...pinnedVisible,
+      ...recent.where((s) => !_pinnedNames.contains(s.name)),
+    ].take(AppShortcutsService.maxShortcuts).toList();
+    await AppShortcutsService.update(merged);
   }
 
   /// 检测所有服务的客户端安装状态
@@ -508,6 +528,7 @@ class HomePageState extends State<HomePage> {
         _lastOpened = lastOpened;
       });
     }
+    await _syncShortcuts();
 
     try {
       if (service.packageName != null && urlOverride == null) {
@@ -552,6 +573,7 @@ class HomePageState extends State<HomePage> {
     if (_pageController.hasClients) {
       _pageController.jumpToPage(0);
     }
+    await _syncShortcuts();
   }
 
   /// 在浏览器中打开（不改变点击统计，仅作为长按菜单的旁路操作）
