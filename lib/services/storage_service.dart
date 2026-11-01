@@ -151,4 +151,18 @@ class StorageService {
     }
     return result;
   }
+
+  /// 用户选择忽略的更新版本号，null 表示未忽略任何版本。
+  Future<String?> getIgnoredUpdateVersion() async {
+    return _prefs?.getString('ignored_update_version');
+  }
+
+  /// 设置忽略的更新版本号，传 null 清除忽略。
+  Future<void> setIgnoredUpdateVersion(String? version) async {
+    if (version == null) {
+      await _prefs?.remove('ignored_update_version');
+    } else {
+      await _prefs?.setString('ignored_update_version', version);
+    }
+  }
 }

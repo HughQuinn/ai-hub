@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/storage_service.dart';
 
 /// OTA 更新提示弹窗：展示新版本号与更新说明，可跳转系统浏览器下载。
+/// 「忽略此版本」会记录版本号，启动时的自动检查将跳过该版本。
 Future<void> showUpdateDialog(
   BuildContext context,
   Map<String, dynamic> update,
@@ -29,6 +32,17 @@ Future<void> showUpdateDialog(
             onPressed: () => Navigator.of(dialogCtx).pop(),
             child: const Text('稍后再说'),
           ),
+          if (latestVersion.isNotEmpty)
+            TextButton(
+              onPressed: () async {
+                // 写入忽略记录后关闭，启动检查不再提示该版本
+                final storage = dialogCtx.read<StorageService>();
+                await storage.setIgnoredUpdateVersion(latestVersion);
+                if (!dialogCtx.mounted) return;
+                Navigator.of(dialogCtx).pop();
+              },
+              child: const Text('忽略此版本'),
+            ),
           if (downloadUrl.isNotEmpty)
             FilledButton(
               onPressed: () async {

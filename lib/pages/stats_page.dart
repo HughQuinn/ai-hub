@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../config/theme_config.dart';
 import '../services/storage_service.dart';
+import '../utils/usage_math.dart';
 import '../utils/week_utils.dart';
 import '../widgets/app_background.dart';
 
@@ -160,6 +161,13 @@ class _StatsPageState extends State<StatsPage> {
   Widget _buildTodaySection(bool isDark) {
     final ranking = _todayRanking;
     final maxCount = ranking.isEmpty ? 1 : ranking.first.value;
+    // 上一个自然周的记录（该周无任何记录时不展示环比）
+    final prevKey = WeekUtils.weekKeyForMonday(
+        WeekUtils.currentWeekMonday().subtract(const Duration(days: 7)));
+    final prevCounts = _history[prevKey];
+    final currentCounts = <String, int>{
+      for (final e in ranking) e.key: e.value,
+    };
 
     return _buildSectionCard(
       isDark: isDark,
@@ -170,14 +178,28 @@ class _StatsPageState extends State<StatsPage> {
           for (final entry in ranking.take(5))
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: _buildRankRow(entry.key, entry.value, maxCount, isDark),
+              child: _buildRankRow(
+                entry.key,
+                entry.value,
+                maxCount,
+                isDark,
+                prevCounts == null
+                    ? null
+                    : UsageMath.weekDelta(currentCounts, prevCounts, entry.key),
+              ),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildRankRow(String name, int count, int maxCount, bool isDark) {
+  Widget _buildRankRow(
+    String name,
+    int count,
+    int maxCount,
+    bool isDark,
+    int? delta,
+  ) {
     final fraction = count / maxCount;
     return Row(
       children: [
@@ -227,17 +249,31 @@ class _StatsPageState extends State<StatsPage> {
           ),
         ),
         const SizedBox(width: 10),
-        SizedBox(
-          width: 44,
-          child: Text(
-            '$count 次',
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: AppColors.secondaryText(isDark: isDark),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              '$count 次',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppColors.secondaryText(isDark: isDark),
+              ),
             ),
-          ),
+            if (delta != null)
+              Text(
+                UsageMath.formatWeekDelta(delta),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: delta > 0
+                      ? const Color(0xFF4CAF50)
+                      : delta < 0
+                          ? const Color(0xFFE57373)
+                          : AppColors.secondaryText(isDark: isDark),
+                ),
+              ),
+          ],
         ),
       ],
     );

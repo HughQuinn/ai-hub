@@ -7,7 +7,10 @@ import '../config/services_config.dart';
 import '../services/storage_service.dart';
 
 class AddPlatformPage extends StatefulWidget {
-  const AddPlatformPage({super.key});
+  /// 传入要编辑的自定义平台名称时进入编辑模式，null 为新增模式。
+  final String? editName;
+
+  const AddPlatformPage({super.key, this.editName});
 
   @override
   State<AddPlatformPage> createState() => _AddPlatformPageState();
@@ -24,7 +27,10 @@ class _AddPlatformPageState extends State<AddPlatformPage> {
   List<Map<String, dynamic>> _existingPlatforms = [];
   bool _isSaving = false;
   bool _isCooldown = false;
+  bool _loaded = false;
   Timer? _cooldownTimer;
+
+  bool get _isEditing => widget.editName != null;
 
   final _presetIcons = presetIcons;
 
@@ -39,8 +45,28 @@ class _AddPlatformPageState extends State<AddPlatformPage> {
 
   Future<void> _loadExistingPlatforms() async {
     final platforms = await _storageService.getCustomPlatforms();
+    if (!mounted) return;
     setState(() {
       _existingPlatforms = platforms;
+      // 编辑模式下用既有数据预填表单（仅执行一次）
+      if (!_loaded && _isEditing) {
+        _loaded = true;
+        final source = platforms
+            .where((p) => p['name'] == widget.editName)
+            .firstOrNull;
+        if (source != null) {
+          _nameController.text = source['name'] as String? ?? '';
+          _urlController.text = source['url'] as String? ?? '';
+          final desc = source['description'] as String?;
+          if (desc != null && desc != '自定义平台') {
+            _descController.text = desc;
+          }
+          _selectedIcon =
+              getIconByName(source['iconName'] as String? ?? '') ??
+                  Icons.smart_toy_outlined;
+          _selectedRegion = source['region'] as String? ?? 'domestic';
+        }
+      }
     });
   }
 
@@ -68,6 +94,10 @@ class _AddPlatformPageState extends State<AddPlatformPage> {
       return '请输入平台名称';
     }
     final name = value.trim();
+    // 编辑模式下名称未变时不算重复
+    if (name == widget.editName) {
+      return null;
+    }
     // 检查内置服务名称
     if (aiServices.any((s) => s.name == name)) {
       return '该名称已存在';
@@ -106,12 +136,23 @@ class _AddPlatformPageState extends State<AddPlatformPage> {
       };
 
       final customPlatforms = await _storageService.getCustomPlatforms();
-      customPlatforms.add(platform);
+      if (_isEditing) {
+        // 原位替换，保持用户在排序页自定义的位置
+        final index =
+            customPlatforms.indexWhere((p) => p['name'] == widget.editName);
+        if (index >= 0) {
+          customPlatforms[index] = platform;
+        } else {
+          customPlatforms.add(platform);
+        }
+      } else {
+        customPlatforms.add(platform);
+      }
       await _storageService.saveCustomPlatforms(customPlatforms);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('保存成功')),
+          SnackBar(content: Text(_isEditing ? '修改已保存' : '保存成功')),
         );
         Navigator.of(context).pop();
       }
@@ -131,7 +172,7 @@ class _AddPlatformPageState extends State<AddPlatformPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('添加自定义平台'),
+        title: Text(_isEditing ? '编辑自定义平台' : '添加自定义平台'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
@@ -282,7 +323,9 @@ class _AddPlatformPageState extends State<AddPlatformPage> {
                           ),
                         )
                       : Text(
-                          _isCooldown ? '请稍候...' : '保存',
+                          _isCooldown
+                              ? '请稍候...'
+                              : (_isEditing ? '保存修改' : '保存'),
                           style: const TextStyle(fontSize: 16),
                         ),
                 ),

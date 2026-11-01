@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../config/theme_config.dart';
+import '../services/storage_service.dart';
+import '../services/update_service.dart';
 import '../widgets/update_dialog.dart';
 import 'home_page.dart';
 import 'settings_page.dart';
@@ -30,15 +33,20 @@ class _MainShellState extends State<MainShell> {
     _maybeShowUpdateDialog();
   }
 
-  /// 启动时检测到新版本则弹出更新提示（每次进入应用最多弹一次）
+  /// 启动时检测到新版本则弹出更新提示（每次进入应用最多弹一次，
+  /// 用户已忽略的版本不再提示；设置页的手动检查不受忽略影响）
   void _maybeShowUpdateDialog() {
     final update = widget.initialUpdate;
     if (update == null || _updateDialogShown) return;
     _updateDialogShown = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      showUpdateDialog(context, update)
-          .then((_) => widget.onClearUpdate?.call());
+      final ignored =
+          await context.read<StorageService>().getIgnoredUpdateVersion();
+      final latestVersion = update['latestVersion'] as String? ?? '';
+      if (!mounted) return;
+      if (!UpdateService.shouldPrompt(latestVersion, ignored)) return;
+      showUpdateDialog(context, update).then((_) => widget.onClearUpdate?.call());
     });
   }
 

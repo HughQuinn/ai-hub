@@ -383,7 +383,9 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void _showAboutDialog(BuildContext context) {
+  Future<void> _showAboutDialog(BuildContext context) async {
+    final ignored = await _storageService.getIgnoredUpdateVersion();
+    if (!context.mounted) return;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -395,9 +397,27 @@ class _SettingsPageState extends State<SettingsPage> {
             const Text('AI 聚合服务平台'),
             const SizedBox(height: 8),
             Text('版本: v${AppInfo.version}'),
+            if (ignored != null)
+              Text(
+                '已忽略更新提醒: v$ignored',
+                style: const TextStyle(fontSize: 12),
+              ),
           ],
         ),
         actions: [
+          if (ignored != null)
+            TextButton(
+              onPressed: () async {
+                await _storageService.setIgnoredUpdateVersion(null);
+                if (!ctx.mounted) return;
+                Navigator.of(ctx).pop();
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('已恢复更新提醒')),
+                );
+              },
+              child: const Text('恢复提醒'),
+            ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('关闭'),

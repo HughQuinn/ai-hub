@@ -23,6 +23,12 @@ class UpdateService {
     return false;
   }
 
+  /// 判断是否应该弹出更新提示：启动自动检查时跳过用户已忽略的版本。
+  /// 手动「检查更新」不经过此判断，保证用户主动操作总有结果。
+  static bool shouldPrompt(String latestVersion, String? ignoredVersion) {
+    return latestVersion.isNotEmpty && latestVersion != ignoredVersion;
+  }
+
   /// Check GitHub for a newer version.
   ///
   /// Returns a map with `latestVersion`, `downloadUrl`, `releaseNotes`

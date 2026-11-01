@@ -52,6 +52,28 @@ class WeekUtils {
     return pa.$2.compareTo(pb.$2);
   }
 
+  /// 返回包含指定周一那一周的周键，与 [weekMonday] 互逆。
+  ///
+  /// 同一个周一可能在相邻年份的周序列中都合法（如年末的第 53 周），
+  /// 按「本周一所在年份优先、再向前一年」的顺序取首个合法结果，
+  /// 与 [getCurrentWeekKey] 的记录口径保持一致。
+  static String weekKeyForMonday(DateTime monday) {
+    for (final year in [monday.year, monday.year - 1, monday.year + 1]) {
+      final week = _weekNumberForMonday(monday, year);
+      if (week != null) return 'service_clicks_${year}_W$week';
+    }
+    return 'service_clicks_${monday.year}_W1';
+  }
+
+  static int? _weekNumberForMonday(DateTime monday, int year) {
+    final jan4 = DateTime(year, 1, 4);
+    final week1Monday = jan4.subtract(Duration(days: jan4.weekday - 1));
+    final days = monday.difference(week1Monday).inDays;
+    if (days < 0 || days % 7 != 0) return null;
+    final week = days ~/ 7 + 1;
+    return week <= 53 ? week : null;
+  }
+
   /// Returns the current year.
   static int getCurrentYear() {
     return DateTime.now().year;

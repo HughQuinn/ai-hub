@@ -5,6 +5,7 @@ import '../config/theme_config.dart';
 import '../config/services_config.dart';
 import '../models/ai_service.dart';
 import '../services/storage_service.dart';
+import 'add_platform_page.dart';
 
 class SortHidePage extends StatefulWidget {
   const SortHidePage({super.key});
@@ -86,6 +87,18 @@ class _SortHidePageState extends State<SortHidePage> {
       _services.insert(newIndex, item);
     });
     _saveData();
+  }
+
+  /// 编辑自定义平台，返回后重新加载列表
+  Future<void> _editCustomPlatform(AiService service) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddPlatformPage(editName: service.name),
+      ),
+    );
+    if (!mounted) return;
+    _loadData();
   }
 
   /// 删除自定义平台，同时清理隐藏列表和排序中的残留
@@ -203,6 +216,16 @@ class _SortHidePageState extends State<SortHidePage> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // 编辑按钮（仅自定义平台）
+                          if (service.isCustom)
+                            IconButton(
+                              icon: const Icon(
+                                Icons.edit_outlined,
+                                color: Colors.blueAccent,
+                              ),
+                              tooltip: '编辑',
+                              onPressed: () => _editCustomPlatform(service),
+                            ),
                           // 删除按钮（仅自定义平台）
                           if (service.isCustom)
                             IconButton(
