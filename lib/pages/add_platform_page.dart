@@ -212,7 +212,13 @@ class _AddPlatformPageState extends State<AddPlatformPage> {
                   if (value == null || value.trim().isEmpty) {
                     return '请输入网址';
                   }
-                  if (!value.startsWith('http://') && !value.startsWith('https://')) {
+                  final url = value.trim();
+                  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    return '网址格式不正确';
+                  }
+                  // 前缀合法但缺主机名（如 http://）同样无法访问，一并拒绝
+                  final uri = Uri.tryParse(url);
+                  if (uri == null || uri.host.isEmpty) {
                     return '网址格式不正确';
                   }
                   return null;

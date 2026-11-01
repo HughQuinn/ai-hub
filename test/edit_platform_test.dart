@@ -97,6 +97,29 @@ void main() {
     expect(platforms.first['url'], 'https://old.example.com');
   });
 
+  testWidgets('URL 缺少主机名时阻止保存', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'custom_platforms': [
+        '{"name":"MyAI","url":"https://old.example.com","description":"旧描述","iconName":"chat_bubble_outline","region":"domestic"}',
+      ],
+    });
+    storage = StorageService();
+    await pumpEditor(tester);
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'https://old.example.com'),
+      'http://',
+    );
+    await tester.ensureVisible(find.text('保存修改'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('保存修改'));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('网址格式不正确'), findsOneWidget);
+    final platforms = await storage.getCustomPlatforms();
+    expect(platforms.first['url'], 'https://old.example.com');
+  });
+
   testWidgets('名称未变时允许保存', (tester) async {
     SharedPreferences.setMockInitialValues({
       'custom_platforms': [
