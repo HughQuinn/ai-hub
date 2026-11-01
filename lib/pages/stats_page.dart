@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../config/services_config.dart';
 import '../config/theme_config.dart';
+import '../models/ai_service.dart';
+import '../services/service_launcher.dart';
 import '../services/storage_service.dart';
 import '../utils/usage_math.dart';
 import '../utils/week_utils.dart';
@@ -20,6 +23,8 @@ class StatsPageState extends State<StatsPage> {
   bool _isLoading = true;
   // weekKey -> {serviceName: count}
   Map<String, Map<String, int>> _history = {};
+  // 可直达的服务（内置 + 自定义），用于点击 Top 行直接打开
+  List<AiService> _openableServices = [];
 
   StorageService get _storageService =>
       Provider.of<StorageService>(context, listen: false);
@@ -36,11 +41,32 @@ class StatsPageState extends State<StatsPage> {
 
   Future<void> _loadData() async {
     final history = await _storageService.getWeeklyHistory();
+    final customPlatforms = await _storageService.getCustomPlatforms();
+    final customServices = customPlatforms.map((p) {
+      return AiService(
+        name: p['name'] as String,
+        url: p['url'] as String,
+        description: (p['description'] as String?) ?? '',
+        region: (p['region'] as String?) ?? 'domestic',
+        isCustom: true,
+      );
+    }).toList();
     if (!mounted) return;
     setState(() {
       _history = history;
+      _openableServices = [...aiServices, ...customServices];
       _isLoading = false;
     });
+  }
+
+  /// 点击 Top 行直接打开对应服务；记录已删除的自定义平台不可直达
+  Future<void> _openFromStats(String name) async {
+    final service =
+        _openableServices.where((s) => s.name == name).firstOrNull;
+    if (service == null || !mounted) return;
+    await ServiceLauncher.open(context,
+        storage: _storageService, service: service);
+    await _loadData();
   }
 
   /// 近 [keepWeeks] 周（含本周）的周键，按时间升序。
@@ -190,6 +216,9 @@ class StatsPageState extends State<StatsPage> {
                 prevCounts == null
                     ? null
                     : UsageMath.weekDelta(currentCounts, prevCounts, entry.key),
+                onTap: _openableServices.any((s) => s.name == entry.key)
+                    ? () => _openFromStats(entry.key)
+                    : null,
               ),
             ),
         ],
@@ -202,10 +231,11 @@ class StatsPageState extends State<StatsPage> {
     int count,
     int maxCount,
     bool isDark,
-    int? delta,
-  ) {
+    int? delta, {
+    VoidCallback? onTap,
+  }) {
     final fraction = count / maxCount;
-    return Row(
+    final row = Row(
       children: [
         Container(
           width: 32,
@@ -279,7 +309,21 @@ class StatsPageState extends State<StatsPage> {
               ),
           ],
         ),
+        // 可直达的行给一个轻量的进入提示
+        if (onTap != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Icon(Icons.chevron_right,
+                size: 16, color: AppColors.secondaryText(isDark: isDark)),
+          ),
       ],
+    );
+
+    if (onTap == null) return row;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: row,
     );
   }
 

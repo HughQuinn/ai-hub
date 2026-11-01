@@ -15,7 +15,7 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: 'AI Hub',
       packageName: 'com.xuqiyi.aihub',
-      version: '1.9.0',
+      version: '1.10.0',
       buildNumber: '2',
       buildSignature: '',
     );

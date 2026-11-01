@@ -8,6 +8,7 @@ import '../config/theme_config.dart';
 import '../config/services_config.dart';
 import '../models/ai_service.dart';
 import '../services/app_shortcuts_service.dart';
+import '../services/service_launcher.dart';
 import '../services/storage_service.dart';
 import '../utils/ask_utils.dart';
 import '../utils/service_order_utils.dart';
@@ -395,27 +396,42 @@ class HomePageState extends State<HomePage> {
                                     ),
                                   ),
                                   const Spacer(),
-                                  // 打开按钮
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 20, vertical: 10),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white
-                                            .withValues(alpha: 0.2),
-                                        borderRadius:
-                                            BorderRadius.circular(20),
-                                      ),
-                                      child: const Text(
-                                        '打开 →',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
+                                  // 打开按钮 + 本周点击次数
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      if ((_clickCounts[service.name] ?? 0) > 0)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(right: 12),
+                                          child: Text(
+                                            '本周 ${_clickCounts[service.name]} 次',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.75),
+                                            ),
+                                          ),
+                                        ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 20, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.2),
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                        child: const Text(
+                                          '打开 →',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                          ),
                                         ),
                                       ),
-                                    ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -573,52 +589,20 @@ class HomePageState extends State<HomePage> {
   }
 
   Future<void> _openService(AiService service, {String? urlOverride}) async {
-    // 在任何 await 之前捕获，避免跨异步间隙使用 context
-    final messenger = ScaffoldMessenger.of(context);
-    final targetUrl = urlOverride ?? service.url;
-
-    await _storageService.incrementClick(service.name);
-    await _storageService.setLastOpened(service.name);
+    await ServiceLauncher.open(
+      context,
+      storage: _storageService,
+      service: service,
+      urlOverride: urlOverride,
+    );
+    if (!mounted) return;
     final newCounts = await _storageService.getAllClickCounts();
     final lastOpened = await _storageService.getAllLastOpened();
-    if (mounted) {
-      setState(() {
-        _clickCounts = newCounts;
-        _lastOpened = lastOpened;
-      });
-    }
+    setState(() {
+      _clickCounts = newCounts;
+      _lastOpened = lastOpened;
+    });
     await _syncShortcuts();
-
-    try {
-      if (service.packageName != null && urlOverride == null) {
-        // 直达提问链接只对网页端有意义，客户端唤起仅在打开主页时生效
-        final installed = await _channel.invokeMethod(
-            'checkAppInstalled', {'packageName': service.packageName});
-        if (installed == true) {
-          try {
-            await _channel.invokeMethod(
-                'launchApp', {'packageName': service.packageName});
-            return;
-          } on PlatformException catch (e) {
-            debugPrint('[AiHub] launchApp failed: ${e.message}');
-          }
-        }
-      }
-      await _channel.invokeMethod('openUrl', {'url': targetUrl});
-    } on PlatformException catch (e) {
-      debugPrint('[AiHub] MethodChannel failed: ${e.message}');
-      // 内置 WebView 打开失败时用系统浏览器兜底
-      final uri = Uri.tryParse(targetUrl);
-      if (uri != null) {
-        try {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-          return;
-        } catch (_) {}
-      }
-      messenger.showSnackBar(
-        const SnackBar(content: Text('打开失败，请检查网络后重试')),
-      );
-    }
   }
 
   // ---- 收藏置顶与长按操作 ----

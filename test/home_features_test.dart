@@ -18,7 +18,7 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: 'AI Hub',
       packageName: 'com.xuqiyi.aihub',
-      version: '1.9.0',
+      version: '1.10.0',
       buildNumber: '2',
       buildSignature: '',
     );
@@ -177,6 +177,36 @@ void main() {
     await tester.tap(find.text('总结一下这段话'));
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('问 Kimi'), findsOneWidget);
+  });
+
+  testWidgets('统计页 Top 点击直达对应服务', (tester) async {
+    final openCalls = <String>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('com.aihub.webview'),
+      (call) async {
+        if (call.method == 'openUrl') {
+          openCalls.add(call.arguments['url'] as String);
+          return null;
+        }
+        return call.method == 'checkAppInstalled' ? false : null;
+      },
+    );
+
+    await pumpApp(tester);
+
+    // 先打开 Kimi 产生本周记录，再切统计
+    await tester.tap(find.text('Kimi'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('统计'));
+    await tester.pump(const Duration(milliseconds: 500));
+    openCalls.clear();
+
+    // 点击 Top 行的 Kimi（.last 为统计页行，前面是 IndexedStack 中主页的卡片）
+    await tester.tap(find.text('Kimi').last);
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(openCalls, contains('https://kimi.moonshot.cn'));
   });
 
   testWidgets('搜索词非空时出现 AI 直达提问入口', (tester) async {
