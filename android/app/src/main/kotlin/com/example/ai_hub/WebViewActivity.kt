@@ -5,12 +5,14 @@ import android.content.res.Configuration
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -31,10 +33,15 @@ class WebViewActivity : android.app.Activity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var errorLayout: LinearLayout
     private var currentUrl: String = ""
+    private var adBlockEnabled = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
+
+        // 广告拦截开关由 Flutter 写入 SharedPreferences（键带 flutter. 前缀），默认开启
+        adBlockEnabled = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+            .getBoolean("flutter.ad_block_enabled", true)
 
         val container = FrameLayout(this)
 
@@ -45,6 +52,18 @@ class WebViewActivity : android.app.Activity() {
             settings.userAgentString = settings.userAgentString + " WebViewBrowser/1.0"
 
             webViewClient = object : WebViewClient() {
+                override fun shouldInterceptRequest(
+                    view: WebView?,
+                    request: WebResourceRequest?
+                ): WebResourceResponse? {
+                    val url = request?.url?.toString() ?: return null
+                    if (adBlockEnabled && AdBlocker.shouldBlock(url)) {
+                        Log.d("AdBlocker", "blocked: ${request.url.host}")
+                        return AdBlocker.emptyResponse()
+                    }
+                    return null
+                }
+
                 override fun shouldOverrideUrlLoading(
                     view: WebView?,
                     request: WebResourceRequest?

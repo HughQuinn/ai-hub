@@ -26,6 +26,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   String _currentLanguage = 'zh-CN';
+  bool _adBlockEnabled = true;
   bool _initialized = false;
 
   static const _languageNames = <String, String>{
@@ -45,6 +46,9 @@ class _SettingsPageState extends State<SettingsPage> {
       _initialized = true;
       _storageService.getLanguage().then((code) {
         if (mounted) setState(() => _currentLanguage = code);
+      });
+      _storageService.getAdBlockEnabled().then((enabled) {
+        if (mounted) setState(() => _adBlockEnabled = enabled);
       });
     }
   }
@@ -160,6 +164,23 @@ class _SettingsPageState extends State<SettingsPage> {
                       subtitle: '粘贴备份 JSON，校验后恢复',
                       secondaryColor: secondaryColor,
                       onTap: _importBackup,
+                    ),
+                    _groupDivider(isDark),
+                    SwitchListTile(
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      secondary:
+                          const Icon(Icons.shield_outlined, color: Colors.indigo),
+                      title: const Text('广告拦截'),
+                      subtitle: Text(
+                        '拦截内置 WebView 中的广告与追踪请求',
+                        style: TextStyle(fontSize: 12, color: secondaryColor),
+                      ),
+                      value: _adBlockEnabled,
+                      onChanged: (value) {
+                        setState(() => _adBlockEnabled = value);
+                        _storageService.setAdBlockEnabled(value);
+                      },
                     ),
                     _groupDivider(isDark),
                     _buildTile(

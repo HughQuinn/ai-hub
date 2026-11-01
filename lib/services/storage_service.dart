@@ -165,4 +165,17 @@ class StorageService {
       await _prefs?.setString('ignored_update_version', version);
     }
   }
+
+  /// 是否在内置 WebView 中拦截广告/追踪请求，默认开启。
+  /// 原生 WebViewActivity 直接读取 flutter.ad_block_enabled（Flutter
+  /// SharedPreferences 的键前缀约定），两侧需保持键名一致。
+  static const _adBlockKey = 'ad_block_enabled';
+
+  Future<bool> getAdBlockEnabled() async {
+    return _prefs?.getBool(_adBlockKey) ?? true;
+  }
+
+  Future<void> setAdBlockEnabled(bool enabled) async {
+    await _prefs?.setBool(_adBlockKey, enabled);
+  }
 }
