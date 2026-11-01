@@ -3,6 +3,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../config/theme_config.dart';
 import '../config/services_config.dart';
 import '../models/ai_service.dart';
@@ -487,7 +488,10 @@ class HomePageState extends State<HomePage> {
   Future<void> _openService(AiService service) async {
     await _storageService.incrementClick(service.name);
     final newCounts = await _storageService.getAllClickCounts();
-    setState(() => _clickCounts = newCounts);
+    if (mounted) setState(() => _clickCounts = newCounts);
+
+    // 在 await 之前捕获，避免跨异步间隙使用 context
+    final messenger = ScaffoldMessenger.of(context);
     try {
       if (service.packageName != null) {
         final installed = await _channel.invokeMethod(
@@ -505,6 +509,17 @@ class HomePageState extends State<HomePage> {
       await _channel.invokeMethod('openUrl', {'url': service.url});
     } on PlatformException catch (e) {
       debugPrint('[AiHub] MethodChannel failed: ${e.message}');
+      // 内置 WebView 打开失败时用系统浏览器兜底
+      final uri = Uri.tryParse(service.url);
+      if (uri != null) {
+        try {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          return;
+        } catch (_) {}
+      }
+      messenger.showSnackBar(
+        const SnackBar(content: Text('打开失败，请检查网络后重试')),
+      );
     }
   }
 
