@@ -178,4 +178,13 @@ class StorageService {
   Future<void> setAdBlockEnabled(bool enabled) async {
     await _prefs?.setBool(_adBlockKey, enabled);
   }
+
+  /// AI 直达提问的历史记录（最近在前，内容裁剪由 AskUtils 负责）。
+  Future<List<String>> getAskHistory() async {
+    return _prefs?.getStringList('ask_history') ?? [];
+  }
+
+  Future<void> setAskHistory(List<String> history) async {
+    await _prefs?.setStringList('ask_history', history);
+  }
 }

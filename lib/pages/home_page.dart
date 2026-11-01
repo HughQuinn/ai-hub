@@ -9,6 +9,7 @@ import '../config/services_config.dart';
 import '../models/ai_service.dart';
 import '../services/app_shortcuts_service.dart';
 import '../services/storage_service.dart';
+import '../utils/ask_utils.dart';
 import '../utils/service_order_utils.dart';
 import '../widgets/service_card.dart';
 import '../widgets/app_background.dart';
@@ -23,11 +24,13 @@ class HomePage extends StatefulWidget {
 class HomePageState extends State<HomePage> {
   static const _channel = MethodChannel('com.aihub.webview');
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
   final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
   Map<String, int> _clickCounts = {};
   int _selectedTab = 0; // 0=全部, 1=国内, 2=国外
   bool _viewModeCard = false; // false=网格, true=卡片
+  List<String> _askHistory = [];
   final PageController _pageController =
       PageController(viewportFraction: 0.78);
   int _currentPage = 0;
@@ -51,6 +54,10 @@ class HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    // 焦点变化决定「最近使用」行与「提问历史」行的显隐
+    _searchFocus.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -67,6 +74,7 @@ class HomePageState extends State<HomePage> {
     await _loadClickCounts();
     await _loadHiddenAndOrder();
     await _loadCustomPlatforms();
+    _askHistory = await _storageService.getAskHistory();
     setState(() => _isLoading = false);
     _checkInstalledClients();
     await _syncShortcuts();
@@ -231,6 +239,7 @@ class HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocus.dispose();
     _scrollController.dispose();
     _pageController.dispose();
     super.dispose();
@@ -443,6 +452,56 @@ class HomePageState extends State<HomePage> {
                                   Icons.star_rounded,
                                   size: 20,
                                   color: Color(0xFFF59E0B),
+                                ),
+                              ),
+                            // 客户端状态：已安装绿点 / 未安装地球（与网格卡片一致）
+                            if (_installedClients[service.name] ?? false)
+                              Positioned(
+                                right: service.needVpn ? 54 : 18,
+                                top: 18,
+                                child: Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF4CAF50),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              Positioned(
+                                right: service.needVpn ? 54 : 18,
+                                top: 17,
+                                child: Icon(
+                                  Icons.language,
+                                  size: 16,
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                ),
+                              ),
+                            // 自定义平台徽章
+                            if (service.isCustom)
+                              Positioned(
+                                left: 16,
+                                bottom: 16,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 5, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Text(
+                                    '自定义',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ),
                           ],
@@ -687,9 +746,12 @@ class HomePageState extends State<HomePage> {
 
   // ---- 最近使用 ----
 
-  /// 无搜索词时显示最近打开的服务（最多 5 个，隐藏的不过滤展示自 _sortedServices）
+  /// 无搜索词且搜索框未聚焦时显示最近打开的服务（最多 5 个）；
+  /// 聚焦后让位于提问历史/模板行，避免两行提示同时挤压
   Widget _buildRecentRow(bool isDark) {
-    if (_searchQuery.trim().isNotEmpty) return const SizedBox.shrink();
+    if (_searchQuery.trim().isNotEmpty || _searchFocus.hasFocus) {
+      return const SizedBox.shrink();
+    }
     final recents = ServiceOrderUtils.mostRecent(
       _sortedServices,
       (s) => s.name,
@@ -750,6 +812,88 @@ class HomePageState extends State<HomePage> {
     );
   }
 
+  // ---- 提问历史与快捷模板 ----
+
+  /// 搜索框聚焦且无输入时显示提问历史与内置模板：点击回填搜索框继续编辑
+  Widget _buildAskHistoryRow(bool isDark) {
+    if (_searchQuery.trim().isNotEmpty || !_searchFocus.hasFocus) {
+      return const SizedBox.shrink();
+    }
+    final chips = AskUtils.chipsFor(_askHistory);
+    if (chips.isEmpty) return const SizedBox.shrink();
+    final secondaryColor = AppColors.secondaryText(isDark: isDark);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: SizedBox(
+        height: 36,
+        child: Row(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: Text('提问:', style: TextStyle(fontSize: 13, color: secondaryColor)),
+            ),
+            Expanded(
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                itemCount: chips.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final text = chips[index];
+                  return GestureDetector(
+                    onTap: () {
+                      _searchController.text = text;
+                      _searchController.selection = TextSelection.fromPosition(
+                          TextPosition(offset: text.length));
+                      _searchFocus.requestFocus();
+                      setState(() => _searchQuery = text);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.searchBackground(isDark: isDark),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: AppColors.searchBorder(isDark: isDark)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.history_edu,
+                              size: 14, color: const Color(0xFF3B82F6)),
+                          const SizedBox(width: 4),
+                          Text(
+                            text,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.primaryText(isDark: isDark),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            // 仅在确有历史时提供清空入口（模板不可清空）
+            if (_askHistory.isNotEmpty)
+              GestureDetector(
+                onTap: () async {
+                  setState(() => _askHistory = []);
+                  await _storageService.setAskHistory([]);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 4, right: 16),
+                  child: Text('清空', style: TextStyle(fontSize: 13, color: secondaryColor)),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ---- AI 直达提问 ----
 
   /// 用搜索框中的问题直达所选 AI：
@@ -758,6 +902,14 @@ class HomePageState extends State<HomePage> {
   Future<void> _askService(AiService service, String query) async {
     final messenger = ScaffoldMessenger.of(context);
     final askUrl = service.buildAskUrl(query);
+
+    // 记录提问历史（去重置顶，供下次快捷回填）
+    final nextHistory = AskUtils.push(_askHistory, query);
+    if (nextHistory.length != _askHistory.length ||
+        nextHistory.first != (_askHistory.isNotEmpty ? _askHistory.first : '')) {
+      setState(() => _askHistory = nextHistory);
+      await _storageService.setAskHistory(nextHistory);
+    }
 
     if (askUrl == null) {
       await Clipboard.setData(ClipboardData(text: query.trim()));
@@ -898,6 +1050,7 @@ class HomePageState extends State<HomePage> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: TextField(
               controller: _searchController,
+              focusNode: _searchFocus,
               onChanged: (value) {
                 setState(() {
                   _searchQuery = value;
@@ -926,8 +1079,9 @@ class HomePageState extends State<HomePage> {
               ),
             ),
           ),
-          // 最近使用（无搜索词时）与 AI 直达提问（有搜索词时）
+          // 最近使用（未聚焦）/ 提问历史与模板（聚焦时）/ 直达提问（有输入时）
           _buildRecentRow(isDark),
+          _buildAskHistoryRow(isDark),
           _buildAskRow(isDark),
           Expanded(
             child: _viewModeCard
