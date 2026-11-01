@@ -202,6 +202,27 @@ class WebViewActivity : android.app.Activity() {
                     gravity = Gravity.CENTER_HORIZONTAL
                 }
             })
+
+            // 加载失败时的逃生出口：转交系统浏览器（仅 http/https 有意义）
+            addView(Button(this@WebViewActivity).apply {
+                text = "在浏览器打开"
+                setOnClickListener {
+                    val url = currentUrl
+                    if (url.startsWith("http://") || url.startsWith("https://")) {
+                        try {
+                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        } catch (_: Exception) {
+                        }
+                    }
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = dpToPx(8)
+                    gravity = Gravity.CENTER_HORIZONTAL
+                }
+            })
         }
         container.addView(errorLayout)
 
