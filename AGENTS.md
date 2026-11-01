@@ -22,7 +22,7 @@ ai_hub/
 │   ├── pages/                 # 页面（main_shell/home_page/stats_page/settings_page/add_platform_page/sort_hide_page）
 │   ├── providers/             # 状态管理
 │   ├── services/              # 服务层（storage_service/update_service/reachability_service/app_info）
-│   ├── utils/                 # 工具类（week_utils/service_order_utils）
+│   ├── utils/                 # 工具类（week_utils/service_order_utils/backup_codec）
 │   └── widgets/               # 组件（service_card/app_background/update_dialog）
 └── test/                      # 测试文件
 ```
@@ -217,6 +217,26 @@ override fun onPause() {
   其余无法访问
 - 纯 Dart `http` 实现，不自动轮询、不涉及原生层
 
+## 功能模块说明（v1.5.0 新增）
+
+### 配置备份与恢复（设置-数据）
+
+- 「导出配置」将自定义平台/隐藏/排序/置顶/语言/主题编码为带 `schemaVersion` 的 JSON 复制到剪贴板
+  （此前 path_provider 已被移除，剪贴板方案保持零依赖）；「从剪贴板导入」读取、校验、
+  弹窗预览条目数后确认写入
+- 编解码与校验全部在纯函数 `BackupCodec` 中：app 标识不符、版本不支持、字段类型错误均拒绝导入，
+  缺失字段按空处理；不备份周点击统计等使用数据
+- 主题字符串互转使用 `ThemeProvider.themeModeKey` / `setThemeModeFromKey`
+
+### 最近使用（首页）
+
+- 打开服务时写入 `last_opened_{name}` 毫秒时间戳；首页在搜索词为空时显示「最近:」行
+  （`ServiceOrderUtils.mostRecent` 稳定降序取前 5 个，从未打开的不参与），输入搜索词时让位于直达提问入口
+
+### 长按菜单补充「复制链接」
+
+- 与置顶/浏览器打开/隐藏并列，复制 `service.url` 到剪贴板，不影响点击统计
+
 ## 测试规范
 
 测试文件位于 `test/`，`update_service_test.dart`（纯函数单测）与
@@ -224,6 +244,9 @@ override fun onPause() {
 v1.4.0 补充：`week_utils_test.dart`/`service_order_test.dart`/`ask_url_test.dart`/
 `reachability_test.dart`/`storage_history_test.dart`（存储与纯函数）与
 `home_features_test.dart`（置顶/统计页/直达提问的 widget 测试）。
+v1.5.0 补充：`backup_codec_test.dart`（备份编解码与校验），
+并在 `service_order_test.dart`/`storage_history_test.dart`/`home_features_test.dart`
+中补充最近使用的用例。
 注意：AppBackground 存在无限循环动画，widget 测试中不可使用 `pumpAndSettle`，
 需用固定时长的 `tester.pump()`。
 
