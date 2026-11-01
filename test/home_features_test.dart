@@ -18,7 +18,7 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: 'AI Hub',
       packageName: 'com.xuqiyi.aihub',
-      version: '1.8.0',
+      version: '1.9.0',
       buildNumber: '2',
       buildSignature: '',
     );
@@ -144,6 +144,39 @@ void main() {
     await tester.tap(findSwitch);
     await tester.pump(const Duration(milliseconds: 300));
     expect(await storage.getAdBlockEnabled(), isFalse);
+  });
+
+  testWidgets('聚焦搜索框展示提问模板，提问后历史可回填', (tester) async {
+    await pumpApp(tester);
+
+    // 未聚焦时无提问历史行
+    expect(find.text('帮我写周报'), findsNothing);
+
+    // 聚焦搜索框 → 内置模板出现
+    await tester.tap(find.byType(TextField));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('帮我写周报'), findsOneWidget);
+
+    // 输入问题 → 模板行让位于直达提问入口
+    await tester.enterText(find.byType(TextField), '总结一下这段话');
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('帮我写周报'), findsNothing);
+    expect(find.text('问 Kimi'), findsOneWidget);
+
+    // 提问 → 记录历史
+    await tester.tap(find.text('问 Kimi'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(await storage.getAskHistory(), contains('总结一下这段话'));
+
+    // 清空输入重新聚焦 → 历史可回填
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('总结一下这段话'), findsOneWidget);
+
+    // 点击历史芯片 → 回填搜索框并出现直达提问
+    await tester.tap(find.text('总结一下这段话'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('问 Kimi'), findsOneWidget);
   });
 
   testWidgets('搜索词非空时出现 AI 直达提问入口', (tester) async {
