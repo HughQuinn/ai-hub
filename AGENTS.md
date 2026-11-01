@@ -103,7 +103,7 @@ package com.example.ai_hub
 ```kotlin
 // 格式: {域名}.{功能模块}（当前唯一通道如下）
 const val CHANNEL_WEBVIEW = "com.aihub.webview"
-// 已实现方法: openUrl / checkAppInstalled / launchApp / clearWebCache
+// 已实现方法: openUrl / checkAppInstalled / launchApp / clearWebCache / updateShortcuts
 ```
 
 ### 通信数据格式
@@ -258,6 +258,26 @@ override fun onPause() {
   `UpdateService.shouldPrompt` 过滤已忽略版本；设置-关于显示忽略状态并可「恢复提醒」
 - 手动「检查更新」不受忽略影响，保证用户主动操作总有结果
 
+## 功能模块说明（v1.7.0 新增）
+
+### 桌面长按快捷方式
+
+- 首页把「置顶服务优先 + 最近使用补足」（上限 4 个）经 `AppShortcutsService.update`
+  通过 `updateShortcuts` 通道同步为 Android 动态快捷方式；触发时机：应用启动、置顶变更、
+  打开服务
+- 原生（MainActivity）用 `ShortcutManagerCompat.setDynamicShortcuts` 整体替换，低版本自动 no-op；
+  快捷方式以显式意图（extra `shortcut_url`）打开 MainActivity（singleTop），
+  `onCreate/onNewIntent` 转交 `WebViewActivity` 直达对应服务
+- 通道契约有 widget 测试覆盖（置顶后应推送含该服务的 shortcuts 列表）
+
+### 缺陷修复
+
+- **周键跨年边界**：1 月初的日期此前被记为「当前年份 + 上一年周号」（如 2027-01-01 →
+  `2027_W53`），现统一由 `WeekUtils.isoWeekYearWeek` 给出 ISO 周年口径（→ `2026_W53`），
+  `getCurrentWeekKey` / `currentWeekMonday` / 历史清理随之修正
+- **自定义平台 URL 校验**：`http://` 这类缺少主机名的地址此前可保存，现校验
+  `Uri.tryParse` 主机非空
+
 ## 测试规范
 
 测试文件位于 `test/`，`update_service_test.dart`（纯函数单测）与
@@ -271,6 +291,9 @@ v1.5.0 补充：`backup_codec_test.dart`（备份编解码与校验），
 `edit_platform_test.dart`（编辑自定义平台 widget 测试），
 并在 `week_utils_test.dart`/`update_service_test.dart`/`storage_history_test.dart`
 中补充 weekKeyForMonday、shouldPrompt 与忽略版本的用例。
+v1.7.0 补充：`home_features_test.dart` 中新增桌面快捷方式通道契约用例、
+统计页实时刷新回归用例；`week_utils_test.dart` 补充 `isoWeekYearWeek` 跨年边界用例；
+`edit_platform_test.dart` 补充 URL 空主机校验用例。
 注意：AppBackground 存在无限循环动画，widget 测试中不可使用 `pumpAndSettle`，
 需用固定时长的 `tester.pump()`。
 

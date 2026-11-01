@@ -21,10 +21,17 @@ AI Hub 是一款 Flutter 构建的 Android 应用，为用户提供**国内外�
 
 - **AI 服务聚合** — 内置 19 个主流 AI 对话平台卡片，覆盖文本处理、推理、多模态等场景
 - **智能启动** — 优先检测并启动本地 App（如已安装豆包、DeepSeek），否则跳转网页版
-- **使用频率排序** — 自动统计各服务点击次数，常用服务置顶
+- **使用频率排序 + 收藏置顶** — 按周点击自动排序；长按卡片可置顶、浏览器打开、复制链接、隐藏
+- **AI 直达提问** — 搜索框输入问题后一键「问 XX」：已配置直达链接的服务带着问题直接打开，其余自动复制问题后打开主页
+- **使用统计** — 本周 Top（含周环比）、近 12 周趋势与累计统计，支持清理 12 周前的过期历史
+- **桌面快捷方式** — 置顶与最近使用的服务自动同步为应用图标长按快捷方式
+- **自定义平台管理** — 添加、编辑、排序、隐藏自定义 AI 平台，重名与 URL 格式校验
+- **配置备份恢复** — 配置导出为带版本号的 JSON（剪贴板），导入前逐字段校验并预览确认
+- **服务可达性检测** — 手动并发探测各服务，区分正常 / 访问受限 / 无法访问
+- **最近使用** — 首页一键直达最近打开的服务
 - **实时搜索** — 支持按名称、描述模糊搜索，快速定位目标服务
 - **暗黑模式** — 完整支持亮色/暗色主题切换，跟随系统或手动设置
-- **OTA 自动更新** — 首次启动自动检测 GitHub Release，有新版本弹窗提示
+- **OTA 自动更新** — 启动检测 GitHub Release，可忽略不想要的版本，随时恢复提醒
 - **流畅动画** — 卡片入场渐显 + 位移过渡效果，体验流畅
 
 ## 技术栈
@@ -85,25 +92,31 @@ ai_hub/
 │   │   ├── icons_config.dart    # 自定义平台图标映射
 │   │   └── theme_config.dart    # 主题颜色配置
 │   ├── models/
-│   │   └── ai_service.dart      # AiService 数据模型
+│   │   └── ai_service.dart      # AiService 数据模型（含 askUrlTemplate 直达提问模板）
 │   ├── pages/
-│   │   ├── main_shell.dart      # 底部导航壳（主页 + 设置，含更新弹窗）
-│   │   ├── home_page.dart       # 主页（服务网格/卡片堆叠 + 搜索）
+│   │   ├── main_shell.dart      # 底部导航壳（主页 + 统计 + 设置，含更新弹窗）
+│   │   ├── home_page.dart       # 主页（服务网格/卡片堆叠 + 搜索 + 最近使用 + 直达提问）
+│   │   ├── stats_page.dart      # 使用统计（本周 Top / 12 周趋势 / 累计 / 历史清理）
 │   │   ├── settings_page.dart   # 设置页（常规/平台管理/数据/其他）
-│   │   ├── add_platform_page.dart # 添加自定义平台
-│   │   └── sort_hide_page.dart  # 排序/隐藏/删除平台
+│   │   ├── add_platform_page.dart # 添加/编辑自定义平台
+│   │   └── sort_hide_page.dart  # 排序/隐藏/编辑/删除平台
 │   ├── providers/
 │   │   └── theme_provider.dart  # 主题状态管理
 │   ├── services/
-│   │   ├── storage_service.dart # SharedPreferences 存储
+│   │   ├── storage_service.dart # SharedPreferences 存储（点击/置顶/最近/忽略版本等）
 │   │   ├── update_service.dart  # GitHub Release OTA 更新
+│   │   ├── reachability_service.dart # 服务可达性检测
+│   │   ├── app_shortcuts_service.dart # 桌面长按快捷方式同步
 │   │   └── app_info.dart        # 版本信息（pubspec 为唯一来源）
 │   ├── utils/
-│   │   └── week_utils.dart      # 周日期工具
+│   │   ├── week_utils.dart      # 周日期工具（ISO 周）
+│   │   ├── service_order_utils.dart # 置顶排序 / 最近使用排序
+│   │   ├── backup_codec.dart    # 配置备份编解码
+│   │   └── usage_math.dart      # 周环比计算
 │   └── widgets/
 │       ├── service_card.dart    # 服务卡片组件
 │       ├── app_background.dart  # 柔光圆动态背景
-│       └── update_dialog.dart   # OTA 更新弹窗
+│       └── update_dialog.dart   # OTA 更新弹窗（支持忽略版本）
 ├── android/                     # Android 原生代码
 ├── pubspec.yaml                 # 依赖配置
 └── README.md

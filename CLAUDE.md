@@ -17,19 +17,21 @@ Flutter + Kotlin AI 服务聚合启动器，卡片式入口 + 内嵌 WebView 加
 lib/
 ├── main.dart           # 入口，仅调用 MyApp
 ├── app.dart            # MaterialApp 配置、主题、路由
-├── config/             # 配置常量（services_config, theme_config）
-├── models/             # 数据模型（ai_service 等）
-├── pages/              # 页面级组件（home_page, settings_page）
+├── config/             # 配置常量（services_config, theme_config, icons_config）
+├── models/             # 数据模型（ai_service）
+├── pages/              # 页面级组件（main_shell, home_page, stats_page, settings_page,
+│                       #   add_platform_page, sort_hide_page）
 ├── providers/          # Provider 状态管理（theme_provider）
-├── services/           # 业务服务层（storage_service）
-├── utils/              # 工具函数（week_utils）
-└── widgets/            # 可复用 UI 组件（service_card）
+├── services/           # 业务服务层（storage_service, update_service,
+│                       #   reachability_service, app_shortcuts_service, app_info）
+├── utils/              # 工具函数（week_utils, service_order_utils, backup_codec, usage_math）
+└── widgets/            # 可复用 UI 组件（service_card, app_background, update_dialog）
 
 android/
 ├── app/src/main/kotlin/com/example/ai_hub/
-│   ├── MainActivity.kt         # 主 Activity
-│   └── (plugin/)               # 自定义插件（按需创建）
-└── (utils/)                    # 工具类（按需创建）
+│   ├── MainActivity.kt         # 主 Activity + MethodChannel + 桌面快捷方式
+│   └── WebViewActivity.kt      # 内置 WebView 页面
+└── AndroidManifest.xml         # 权限与 queries 声明
 ```
 
 ## Development Rules
