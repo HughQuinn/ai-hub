@@ -92,6 +92,39 @@ class _SortHidePageState extends State<SortHidePage> {
     _saveData();
   }
 
+  /// 删除自定义平台，同时清理隐藏列表和排序中的残留
+  Future<void> _deleteCustomPlatform(AiService service) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除平台'),
+        content: Text('确定删除自定义平台「${service.name}」吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final platforms = await _storageService.getCustomPlatforms();
+    platforms.removeWhere((p) => p['name'] == service.name);
+    await _storageService.saveCustomPlatforms(platforms);
+
+    if (!mounted) return;
+    setState(() {
+      _services.removeWhere((s) => s.name == service.name);
+      _hiddenNames.remove(service.name);
+    });
+    await _saveData();
+  }
+
   Widget _buildIcon(AiService service, bool isDark) {
     if (service.iconPath != null) {
       final path = service.iconPath!;
@@ -174,6 +207,16 @@ class _SortHidePageState extends State<SortHidePage> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // 删除按钮（仅自定义平台）
+                          if (service.isCustom)
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.redAccent,
+                              ),
+                              tooltip: '删除',
+                              onPressed: () => _deleteCustomPlatform(service),
+                            ),
                           // 眼睛图标
                           IconButton(
                             icon: Icon(
