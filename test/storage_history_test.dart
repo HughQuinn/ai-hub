@@ -107,4 +107,22 @@ void main() {
       expect((await storage.getAllLastOpened())['Kimi'], 9999);
     });
   });
+
+  group('StorageService 忽略更新版本', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      storage = StorageService();
+      await storage.init();
+    });
+
+    test('默认未忽略，写入与清除可往返', () async {
+      expect(await storage.getIgnoredUpdateVersion(), isNull);
+
+      await storage.setIgnoredUpdateVersion('1.5.0');
+      expect(await storage.getIgnoredUpdateVersion(), '1.5.0');
+
+      await storage.setIgnoredUpdateVersion(null);
+      expect(await storage.getIgnoredUpdateVersion(), isNull);
+    });
+  });
 }

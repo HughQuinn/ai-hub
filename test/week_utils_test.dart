@@ -56,6 +56,36 @@ void main() {
     });
   });
 
+  group('WeekUtils.weekKeyForMonday', () {
+    test('平年正常周（2026-11-02 周一 → 2026 W45）', () {
+      expect(
+        WeekUtils.weekKeyForMonday(DateTime(2026, 11, 2)),
+        'service_clicks_2026_W45',
+      );
+    });
+
+    test('年初的周（2026-01-05 周一 → 2026 W2）', () {
+      expect(
+        WeekUtils.weekKeyForMonday(DateTime(2026, 1, 5)),
+        'service_clicks_2026_W2',
+      );
+    });
+
+    test('年末第 53 周（2024-12-30 周一 → 2024 W53）', () {
+      expect(
+        WeekUtils.weekKeyForMonday(DateTime(2024, 12, 30)),
+        'service_clicks_2024_W53',
+      );
+    });
+
+    test('与 weekMonday 互逆（当前周）', () {
+      final key = WeekUtils.getCurrentWeekKey();
+      final parsed = WeekUtils.parseWeekKey(key)!;
+      final monday = WeekUtils.weekMonday(parsed.$1, parsed.$2);
+      expect(WeekUtils.weekKeyForMonday(monday), key);
+    });
+  });
+
   group('WeekUtils.compareWeekKeys', () {
     test('跨年与多位周号均按时间排序', () {
       final keys = [

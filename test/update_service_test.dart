@@ -28,4 +28,23 @@ void main() {
       expect(UpdateService.isNewerVersion('1.2.1', '1.2'), isFalse);
     });
   });
+
+  group('UpdateService.shouldPrompt', () {
+    test('未忽略任何版本时提示', () {
+      expect(UpdateService.shouldPrompt('1.4.0', null), isTrue);
+    });
+
+    test('最新版本与忽略版本不同则提示', () {
+      expect(UpdateService.shouldPrompt('1.4.0', '1.3.0'), isTrue);
+      expect(UpdateService.shouldPrompt('1.5.0', '1.4.0'), isTrue);
+    });
+
+    test('最新版本即被忽略的版本时不提示', () {
+      expect(UpdateService.shouldPrompt('1.4.0', '1.4.0'), isFalse);
+    });
+
+    test('最新版本为空时不提示', () {
+      expect(UpdateService.shouldPrompt('', null), isFalse);
+    });
+  });
 }
