@@ -22,6 +22,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   String _currentLanguage = 'zh-CN';
+  bool _initialized = false;
 
   static const _languageNames = <String, String>{
     'zh-CN': '简体中文',
@@ -29,12 +30,19 @@ class _SettingsPageState extends State<SettingsPage> {
     'en': 'English',
   };
 
+  // 使用 main.dart 注入的同一实例，裸 new 的 StorageService 未 init，读写会静默失效
+  StorageService get _storageService =>
+      Provider.of<StorageService>(context, listen: false);
+
   @override
-  void initState() {
-    super.initState();
-    StorageService().getLanguage().then((code) {
-      if (mounted) setState(() => _currentLanguage = code);
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      _storageService.getLanguage().then((code) {
+        if (mounted) setState(() => _currentLanguage = code);
+      });
+    }
   }
 
   @override
@@ -305,7 +313,7 @@ class _SettingsPageState extends State<SettingsPage> {
           groupValue: _currentLanguage,
           onChanged: (value) async {
             if (value != null && available.contains(value)) {
-              await StorageService().setLanguage(value);
+              await _storageService.setLanguage(value);
               if (!ctx.mounted) return;
               setState(() => _currentLanguage = value);
             }
