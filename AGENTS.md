@@ -307,6 +307,19 @@ override fun onPause() {
 - 卡片堆叠视图打开按钮左侧显示「本周 N 次」点击徽章
 - 配置备份纳入提问历史（ask_history），导入预览显示条数
 
+## 功能模块说明（v1.11.0 新增）
+
+### 提问模板管理
+
+- 设置-常规新增「提问模板管理」入口（AskTemplatesPage）：内置模板首次展示为默认，
+  支持新增/编辑/删除/拖动排序，改动即持久化到 `ask_templates`（null=未初始化用内置默认，
+  空列表=用户明确清空，两者语义不同）
+- 首页提问行的芯片按存储的模板列表展示；从管理页返回经 `onRefreshHome → refreshServices`
+  同步重载
+- 校验：模板非空、重名拒绝（编辑时放行自身原名）；模板内容上限 30 字符
+- WebView 错误页新增「在浏览器打开」按钮：加载失败时除重试外可转交系统浏览器
+  （仅 http/https）
+
 ## 测试规范
 
 测试文件位于 `test/`，`update_service_test.dart`（纯函数单测）与
@@ -325,6 +338,14 @@ v1.7.0 补充：`home_features_test.dart` 中新增桌面快捷方式通道契�
 `edit_platform_test.dart` 补充 URL 空主机校验用例。
 v1.9.0 补充：`ask_utils_test.dart`（提问历史去重/截断/模板合并），
 `home_features_test.dart` 补充聚焦展示模板、提问记录历史与回填的用例。
+v1.11.0 补充：`home_features_test.dart` 新增提问模板管理全流程用例
+（新增→持久化→返回主页同步到提问行）。
+
+测试环境注意（IndexedStack + finder）：
+- IndexedStack 非选中子树对默认 finder（skipOffstage=true）不可见，跨 Tab 断言
+  需先切 Tab 或用 `skipOffstage: false`
+- 页面 push 后的异步加载需要**两次 pump**（第二次等微任务完成后的重建）；
+  `Navigator.pop` 后路由退出清理需要约 750-900ms 的分步 pump
 注意：AppBackground 存在无限循环动画，widget 测试中不可使用 `pumpAndSettle`，
 需用固定时长的 `tester.pump()`。
 
