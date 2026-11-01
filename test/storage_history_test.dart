@@ -125,4 +125,22 @@ void main() {
       expect(await storage.getIgnoredUpdateVersion(), isNull);
     });
   });
+
+  group('StorageService 广告拦截开关', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      storage = StorageService();
+      await storage.init();
+    });
+
+    test('默认开启，关闭与重新开启可往返', () async {
+      expect(await storage.getAdBlockEnabled(), isTrue);
+
+      await storage.setAdBlockEnabled(false);
+      expect(await storage.getAdBlockEnabled(), isFalse);
+
+      await storage.setAdBlockEnabled(true);
+      expect(await storage.getAdBlockEnabled(), isTrue);
+    });
+  });
 }

@@ -18,7 +18,7 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: 'AI Hub',
       packageName: 'com.xuqiyi.aihub',
-      version: '1.7.0',
+      version: '1.8.0',
       buildNumber: '2',
       buildSignature: '',
     );
@@ -124,6 +124,26 @@ void main() {
     expect(find.textContaining('本周还没有使用记录'), findsNothing);
     expect(find.text('使用统计'), findsOneWidget);
     expect(find.text('Kimi'), findsWidgets);
+  });
+
+  testWidgets('设置页广告拦截开关与存储联动', (tester) async {
+    // 数据分组在页面下方，放大视口使开关完整可见
+    tester.view.physicalSize = const Size(800, 1700);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await pumpApp(tester);
+
+    await tester.tap(find.text('设置'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final findSwitch = find.byType(Switch);
+    expect(findSwitch, findsOneWidget);
+    expect(tester.widget<Switch>(findSwitch).value, isTrue);
+
+    await tester.tap(findSwitch);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(await storage.getAdBlockEnabled(), isFalse);
   });
 
   testWidgets('搜索词非空时出现 AI 直达提问入口', (tester) async {
