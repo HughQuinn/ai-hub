@@ -1,6 +1,9 @@
 package com.example.ai_hub
 
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.webkit.WebView
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -19,6 +22,14 @@ class MainActivity : FlutterActivity() {
                         val url = call.argument<String>("url")
                         if (url.isNullOrEmpty()) {
                             result.error("INVALID_URL", "URL is null or empty", null)
+                        } else if (url.startsWith("http://") && Build.VERSION.SDK_INT >= 28) {
+                            // Android 9+ 默认禁止 WebView 加载明文 HTTP，改用外部浏览器打开
+                            try {
+                                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                result.success(null)
+                            } catch (e: Exception) {
+                                result.error("OPEN_FAILED", e.message, null)
+                            }
                         } else {
                             val intent = Intent(this, WebViewActivity::class.java)
                             intent.putExtra("url", url)
@@ -63,10 +74,15 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                     "clearWebCache" -> {
-                        // WebView reference may not be available here.
-                        // Return success; actual clearing happens when
-                        // WebViewActivity next opens and calls clearCache.
-                        result.success(null)
+                        try {
+                            // 借助临时 WebView 实例清空全局缓存（不动 Cookie，登录状态保留）
+                            val temp = WebView(this)
+                            temp.clearCache(true)
+                            temp.destroy()
+                            result.success(null)
+                        } catch (e: Exception) {
+                            result.error("CLEAR_CACHE_FAILED", e.message, null)
+                        }
                     }
                     else -> result.notImplemented()
                 }

@@ -1,12 +1,14 @@
 package com.example.ai_hub
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.CookieManager
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -127,12 +129,16 @@ class WebViewActivity : android.app.Activity() {
         }
         container.addView(progressBar)
 
-        // 错误提示布局 - 居中显示
+        // 错误提示布局 - 居中显示（背景跟随系统深浅色）
+        val isNight = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES
+        val errorBgColor = if (isNight) Color.parseColor("#111318") else Color.WHITE
+        val errorTextColor = if (isNight) Color.parseColor("#9CA3AF") else Color.parseColor("#757575")
         errorLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             visibility = View.GONE
-            setBackgroundColor(Color.WHITE)
+            setBackgroundColor(errorBgColor)
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
@@ -150,7 +156,7 @@ class WebViewActivity : android.app.Activity() {
             addView(TextView(this@WebViewActivity).apply {
                 text = "页面加载失败"
                 textSize = 16f
-                setTextColor(Color.parseColor("#757575"))
+                setTextColor(errorTextColor)
                 gravity = Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -208,6 +214,12 @@ class WebViewActivity : android.app.Activity() {
 
     private fun dpToPx(dp: Int): Int {
         return (dp * resources.displayMetrics.density + 0.5f).toInt()
+    }
+
+    override fun onPause() {
+        // 强制将 Cookie 落盘，进程被杀时登录状态不丢失
+        CookieManager.getInstance().flush()
+        super.onPause()
     }
 
     override fun onBackPressed() {
