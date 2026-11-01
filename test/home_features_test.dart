@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ai_hub/app.dart';
 import 'package:ai_hub/providers/theme_provider.dart';
+import 'package:ai_hub/pages/ask_templates_page.dart';
 import 'package:ai_hub/services/storage_service.dart';
 
 void main() {
@@ -18,7 +19,7 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: 'AI Hub',
       packageName: 'com.xuqiyi.aihub',
-      version: '1.10.0',
+      version: '1.11.0',
       buildNumber: '2',
       buildSignature: '',
     );
@@ -207,6 +208,49 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(openCalls, contains('https://kimi.moonshot.cn'));
+  });
+
+  testWidgets('提问模板管理新增自定义模板并同步到提问行', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('设置'));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.tap(find.text('提问模板管理'));
+    await tester.pump(const Duration(milliseconds: 400));
+    // 第二次 pump 等待 _load 微任务完成后的重建
+    await tester.pump(const Duration(milliseconds: 200));
+
+    // 未初始化时展示内置默认模板
+    expect(find.text('帮我写周报'), findsOneWidget);
+
+    // 新增自定义模板
+    await tester.tap(find.byIcon(Icons.add).first);
+    await tester.pump(const Duration(milliseconds: 300));
+    debugPrint('ADD_TAP_A textfields=${find.byType(TextField).evaluate().length}');
+    await tester.pump(const Duration(milliseconds: 100));
+    debugPrint('ADD_TAP_B textfields=${find.byType(TextField).evaluate().length}');
+    await tester.enterText(find.byType(TextField), '自定义模板A');
+    await tester.tap(find.text('保存'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(await storage.getAskTemplates(), contains('自定义模板A'));
+
+    // 返回主页聚焦搜索框，新模板出现在提问行
+    // （IndexedStack 非选中子树对默认 finder 不可见，先编程式 pop 再切回主页 Tab）
+    final nav = tester.state<NavigatorState>(find.byType(Navigator));
+    nav.pop();
+    // pop 后路由退出动画与清理需要约 750-900ms 的 pump 推进（分步推进更稳）
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 150));
+    }
+    expect(find.byType(AskTemplatesPage), findsNothing);
+    await tester.tap(find.text('主页'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.tap(find.byType(TextField));
+    await tester.pump(const Duration(milliseconds: 300));
+    // IndexedStack 子树的 finder 可见性受 tab 状态影响，用 skipOffstage 断言
+    expect(find.text('自定义模板A', skipOffstage: false), findsOneWidget);
   });
 
   testWidgets('搜索词非空时出现 AI 直达提问入口', (tester) async {

@@ -34,19 +34,24 @@ void main() {
 
   group('AskUtils.chipsFor', () {
     test('历史在前，模板去重补位', () {
-      final chips = AskUtils.chipsFor(['自定义问题']);
+      final chips = AskUtils.chipsFor(['自定义问题'], AskUtils.templates);
       expect(chips.first, '自定义问题');
       expect(chips.contains('帮我写周报'), isTrue);
       expect(chips, ['自定义问题', ...AskUtils.templates]);
     });
 
     test('历史中已有的模板不重复出现', () {
-      final chips = AskUtils.chipsFor(['帮我写周报']);
+      final chips = AskUtils.chipsFor(['帮我写周报'], AskUtils.templates);
       expect(chips.where((c) => c == '帮我写周报').length, 1);
     });
 
     test('空历史只展示模板', () {
-      expect(AskUtils.chipsFor([]), AskUtils.templates);
+      expect(AskUtils.chipsFor([], AskUtils.templates), AskUtils.templates);
+    });
+
+    test('支持用户自定义模板列表', () {
+      final chips = AskUtils.chipsFor([], ['我的模板', '另一个模板']);
+      expect(chips, ['我的模板', '另一个模板']);
     });
   });
 }
