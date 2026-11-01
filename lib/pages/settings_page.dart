@@ -476,12 +476,14 @@ class _SettingsPageState extends State<SettingsPage> {
     final order = await _storageService.getCustomOrder();
     final pins = await _storageService.getPinnedServices();
     final language = await _storageService.getLanguage();
+    final askHistory = await _storageService.getAskHistory();
 
     final json = BackupCodec.encode(
       customPlatforms: platforms,
       hiddenServices: hidden,
       customOrder: order ?? const [],
       pinnedServices: pins,
+      askHistory: askHistory,
       language: language,
       themeMode: themeProvider.themeModeKey,
     );
@@ -522,6 +524,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final hidden = BackupCodec.stringList(data, 'hiddenServices');
     final order = BackupCodec.stringList(data, 'customOrder');
     final pins = BackupCodec.stringList(data, 'pinnedServices');
+    final askHistory = BackupCodec.stringList(data, 'askHistory');
     final language = data['language'] as String?;
     final themeKey = data['themeMode'] as String?;
 
@@ -540,6 +543,7 @@ class _SettingsPageState extends State<SettingsPage> {
             Text('自定义排序：${order.isEmpty ? '未设置' : '${order.length} 项'}',
                 style: const TextStyle(fontSize: 13)),
             Text('置顶服务：${pins.length} 个', style: const TextStyle(fontSize: 13)),
+            Text('提问历史：${askHistory.length} 条', style: const TextStyle(fontSize: 13)),
             if (language != null)
               Text('语言：$language', style: const TextStyle(fontSize: 13)),
             if (themeKey != null)
@@ -564,6 +568,7 @@ class _SettingsPageState extends State<SettingsPage> {
     await _storageService.setHiddenServices(hidden);
     await _storageService.setCustomOrder(order);
     await _storageService.setPinnedServices(pins);
+    await _storageService.setAskHistory(askHistory);
     if (language != null) {
       await _storageService.setLanguage(language);
     }

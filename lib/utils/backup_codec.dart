@@ -19,6 +19,7 @@ class BackupCodec {
     required List<String> hiddenServices,
     required List<String> customOrder,
     required List<String> pinnedServices,
+    required List<String> askHistory,
     required String language,
     String? themeMode,
     DateTime? exportedAt,
@@ -32,6 +33,7 @@ class BackupCodec {
         'hiddenServices': hiddenServices,
         'customOrder': customOrder,
         'pinnedServices': pinnedServices,
+        'askHistory': askHistory,
         'language': language,
         'themeMode': ?themeMode,
       },
@@ -62,6 +64,7 @@ class BackupCodec {
     _expectStringList(data, 'hiddenServices');
     _expectStringList(data, 'customOrder');
     _expectStringList(data, 'pinnedServices');
+    _expectStringList(data, 'askHistory');
     _expectPlatformList(data);
     if (data.containsKey('language') && data['language'] is! String) {
       throw const FormatException('language 字段类型不正确');

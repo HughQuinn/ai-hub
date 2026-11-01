@@ -11,6 +11,7 @@ void main() {
         hiddenServices: ['豆包'],
         customOrder: ['DeepSeek', 'Kimi'],
         pinnedServices: ['Kimi'],
+        askHistory: ['帮我写周报', '翻译成英文：'],
         language: 'zh-CN',
         themeMode: 'dark',
         exportedAt: DateTime.utc(2026, 11, 2),
@@ -23,6 +24,8 @@ void main() {
       expect(BackupCodec.stringList(data, 'hiddenServices'), ['豆包']);
       expect(BackupCodec.stringList(data, 'customOrder'), ['DeepSeek', 'Kimi']);
       expect(BackupCodec.stringList(data, 'pinnedServices'), ['Kimi']);
+      expect(BackupCodec.stringList(data, 'askHistory'),
+          ['帮我写周报', '翻译成英文：']);
       expect(data['language'], 'zh-CN');
       expect(data['themeMode'], 'dark');
     });
@@ -33,6 +36,7 @@ void main() {
         hiddenServices: const [],
         customOrder: const [],
         pinnedServices: const [],
+        askHistory: const [],
         language: 'zh-CN',
       );
       expect(json, contains('"app":"ai_hub"'));
@@ -94,6 +98,10 @@ void main() {
       );
       expect(
         () => BackupCodec.decode('$head{"themeMode":1}}'),
+        throwsA(isA<FormatException>()),
+      );
+      expect(
+        () => BackupCodec.decode('$head{"askHistory":1}}'),
         throwsA(isA<FormatException>()),
       );
       expect(
