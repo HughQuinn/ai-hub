@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:ai_hub/app.dart';
+import 'package:ai_hub/services/app_info.dart';
 import 'package:ai_hub/services/storage_service.dart';
+import 'package:ai_hub/services/update_service.dart';
 import 'package:ai_hub/config/theme_config.dart';
 import 'package:ai_hub/pages/add_platform_page.dart';
 import 'package:ai_hub/pages/sort_hide_page.dart';
 import 'package:ai_hub/providers/theme_provider.dart';
+import 'package:ai_hub/widgets/update_dialog.dart';
 
 class SettingsPage extends StatefulWidget {
   static const _channel = MethodChannel('com.aihub.webview');
@@ -166,7 +168,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       icon: Icons.info_outline,
                       iconColor: Colors.grey,
                       title: '关于/版本',
-                      subtitle: 'v$appVersion',
+                      subtitle: 'v${AppInfo.version}',
                       secondaryColor: secondaryColor,
                       onTap: () => _showAboutDialog(context),
                     ),
@@ -352,7 +354,7 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             const Text('AI 聚合服务平台'),
             const SizedBox(height: 8),
-            Text('版本: v$appVersion'),
+            Text('版本: v${AppInfo.version}'),
           ],
         ),
         actions: [
@@ -361,12 +363,18 @@ class _SettingsPageState extends State<SettingsPage> {
             child: const Text('关闭'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
-              // TODO: 检查更新
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('检查更新功能开发中')),
-              );
+              final update =
+                  await UpdateService().checkForUpdate(AppInfo.version);
+              if (!mounted || !context.mounted) return;
+              if (update == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('当前已是最新版本')),
+                );
+              } else {
+                showUpdateDialog(context, update);
+              }
             },
             child: const Text('检查更新'),
           ),

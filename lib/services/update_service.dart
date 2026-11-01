@@ -32,7 +32,7 @@ class UpdateService {
       final response = await http.get(
         Uri.parse(_releaseUrl),
         headers: {'Accept': 'application/vnd.github.v3+json'},
-      );
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) return null;
 

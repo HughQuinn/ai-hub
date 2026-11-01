@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/theme_config.dart';
+import '../widgets/update_dialog.dart';
 import 'home_page.dart';
 import 'settings_page.dart';
 
@@ -20,6 +21,25 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
   final _homePageKey = GlobalKey<HomePageState>();
+  bool _updateDialogShown = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _maybeShowUpdateDialog();
+  }
+
+  /// 启动时检测到新版本则弹出更新提示（每次进入应用最多弹一次）
+  void _maybeShowUpdateDialog() {
+    final update = widget.initialUpdate;
+    if (update == null || _updateDialogShown) return;
+    _updateDialogShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showUpdateDialog(context, update)
+          .then((_) => widget.onClearUpdate?.call());
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

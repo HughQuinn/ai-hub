@@ -3,10 +3,8 @@ import 'package:provider/provider.dart';
 import 'config/theme_config.dart';
 import 'providers/theme_provider.dart';
 import 'pages/main_shell.dart';
+import 'services/app_info.dart';
 import 'services/update_service.dart';
-
-/// App version, keep in sync with pubspec.yaml version field.
-const String appVersion = "1.3.0";
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -25,7 +23,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _checkUpdateOnStartup() async {
-    final update = await UpdateService().checkForUpdate(appVersion);
+    final update = await UpdateService().checkForUpdate(AppInfo.version);
     if (mounted && update != null) {
       setState(() => _availableUpdate = update);
     }
